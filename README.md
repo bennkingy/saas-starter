@@ -86,6 +86,13 @@ To test Stripe payments, use the following test card details:
 
 When you're ready to deploy your SaaS application to production, follow these steps:
 
+## TODO (Jellycat Stock Alerts)
+
+- [ ] Replace placeholder URLs in `lib/config/products.ts` with real Jellycat product links
+- [ ] Set required env vars: `CRON_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
+- [ ] Configure an external cron to call `GET /api/cron/stock-check` once per minute with header `x-cron-secret: <CRON_SECRET>`
+- [ ] Implement SMS provider (Twilio) in `lib/notifications/sms.ts` and set `TWILIO_*` env vars before enabling SMS in production
+
 ### Set up a production Stripe webhook
 
 1. Go to the Stripe Dashboard and create a new webhook for your production environment.

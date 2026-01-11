@@ -34,12 +34,12 @@ export async function createCheckoutSession({
     ],
     mode: 'subscription',
     success_url: `${process.env.BASE_URL}/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${process.env.BASE_URL}/pricing`,
+    cancel_url: `${process.env.BASE_URL}/cancel`,
     customer: team.stripeCustomerId || undefined,
     client_reference_id: user.id.toString(),
     allow_promotion_codes: true,
     subscription_data: {
-      trial_period_days: 14
+      trial_period_days: 7
     }
   });
 
@@ -120,6 +120,9 @@ export async function handleSubscriptionChange(
   const customerId = subscription.customer as string;
   const subscriptionId = subscription.id;
   const status = subscription.status;
+  const currentPeriodEnd = subscription.current_period_end
+    ? new Date(subscription.current_period_end * 1000)
+    : null;
 
   const team = await getTeamByStripeCustomerId(customerId);
 
@@ -129,19 +132,34 @@ export async function handleSubscriptionChange(
   }
 
   if (status === 'active' || status === 'trialing') {
-    const plan = subscription.items.data[0]?.plan;
+    const item = subscription.items.data[0];
+    const price = item?.price;
+    const productId =
+      (typeof price?.product === 'string' ? price.product : price?.product?.id) ?? null;
+
+    const product = productId ? await stripe.products.retrieve(productId) : null;
     await updateTeamSubscription(team.id, {
       stripeSubscriptionId: subscriptionId,
-      stripeProductId: plan?.product as string,
-      planName: (plan?.product as Stripe.Product).name,
-      subscriptionStatus: status
+      stripeProductId: productId,
+      planName: product?.name ?? null,
+      subscriptionStatus: status,
+      stripeCurrentPeriodEnd: currentPeriodEnd
     });
   } else if (status === 'canceled' || status === 'unpaid') {
     await updateTeamSubscription(team.id, {
       stripeSubscriptionId: null,
       stripeProductId: null,
       planName: null,
-      subscriptionStatus: status
+      subscriptionStatus: status,
+      stripeCurrentPeriodEnd: currentPeriodEnd
+    });
+  } else {
+    await updateTeamSubscription(team.id, {
+      stripeSubscriptionId: subscriptionId,
+      stripeProductId: team.stripeProductId,
+      planName: team.planName,
+      subscriptionStatus: status,
+      stripeCurrentPeriodEnd: currentPeriodEnd
     });
   }
 }

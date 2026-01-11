@@ -5,6 +5,7 @@ import {
   text,
   timestamp,
   integer,
+  boolean,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -29,6 +30,56 @@ export const teams = pgTable('teams', {
   stripeProductId: text('stripe_product_id'),
   planName: varchar('plan_name', { length: 50 }),
   subscriptionStatus: varchar('subscription_status', { length: 20 }),
+  stripeCurrentPeriodEnd: timestamp('stripe_current_period_end'),
+});
+
+export const products = pgTable('products', {
+  id: serial('id').primaryKey(),
+  externalId: varchar('external_id', { length: 100 }).notNull().unique(),
+  name: varchar('name', { length: 255 }).notNull(),
+  url: text('url').notNull(),
+  imageUrl: text('image_url'),
+  /**
+   * Legacy field from an earlier "stock tracking" idea.
+   * Current behavior: we only monitor the Jellycat New page for new arrivals.
+   * We keep this column for now to avoid a migration.
+   */
+  lastKnownStock: boolean('last_known_stock').notNull().default(false),
+  lastCheckedAt: timestamp('last_checked_at'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const stockEvents = pgTable('stock_events', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id')
+    .notNull()
+    .references(() => products.id),
+  detectedAt: timestamp('detected_at').notNull().defaultNow(),
+  notifiedAt: timestamp('notified_at'),
+});
+
+/**
+ * Small persistent state for external fetches (ETag/Last-Modified, etc).
+ */
+export const scraperState = pgTable('scraper_state', {
+  key: varchar('key', { length: 100 }).primaryKey(),
+  etag: text('etag'),
+  lastModified: text('last_modified'),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const notificationPreferences = pgTable('notification_preferences', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id)
+    .unique(),
+  emailEnabled: boolean('email_enabled').notNull().default(true),
+  smsEnabled: boolean('sms_enabled').notNull().default(false),
+  phoneNumber: varchar('phone_number', { length: 20 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 export const teamMembers = pgTable('team_members', {
@@ -79,6 +130,27 @@ export const usersRelations = relations(users, ({ many }) => ({
   invitationsSent: many(invitations),
 }));
 
+export const productsRelations = relations(products, ({ many }) => ({
+  stockEvents: many(stockEvents),
+}));
+
+export const stockEventsRelations = relations(stockEvents, ({ one }) => ({
+  product: one(products, {
+    fields: [stockEvents.productId],
+    references: [products.id],
+  }),
+}));
+
+export const notificationPreferencesRelations = relations(
+  notificationPreferences,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [notificationPreferences.userId],
+      references: [users.id],
+    }),
+  })
+);
+
 export const invitationsRelations = relations(invitations, ({ one }) => ({
   team: one(teams, {
     fields: [invitations.teamId],
@@ -116,6 +188,14 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
+export type Product = typeof products.$inferSelect;
+export type NewProduct = typeof products.$inferInsert;
+export type StockEvent = typeof stockEvents.$inferSelect;
+export type NewStockEvent = typeof stockEvents.$inferInsert;
+export type ScraperState = typeof scraperState.$inferSelect;
+export type NewScraperState = typeof scraperState.$inferInsert;
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+export type NewNotificationPreferences = typeof notificationPreferences.$inferInsert;
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type NewTeamMember = typeof teamMembers.$inferInsert;
 export type ActivityLog = typeof activityLogs.$inferSelect;

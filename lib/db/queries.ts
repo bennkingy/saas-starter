@@ -1,6 +1,14 @@
-import { desc, and, eq, isNull } from 'drizzle-orm';
+import { desc, and, eq, isNull, isNotNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users } from './schema';
+import {
+  activityLogs,
+  notificationPreferences,
+  products,
+  stockEvents,
+  teamMembers,
+  teams,
+  users,
+} from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -53,6 +61,7 @@ export async function updateTeamSubscription(
     stripeProductId: string | null;
     planName: string | null;
     subscriptionStatus: string;
+    stripeCurrentPeriodEnd: Date | null;
   }
 ) {
   await db
@@ -127,4 +136,96 @@ export async function getTeamForUser() {
   });
 
   return result?.team || null;
+}
+
+export async function getNotificationPreferencesForUser() {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const existing = await db
+    .select()
+    .from(notificationPreferences)
+    .where(eq(notificationPreferences.userId, user.id))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return existing[0];
+  }
+
+  const inserted = await db
+    .insert(notificationPreferences)
+    .values({ userId: user.id })
+    .returning();
+
+  return inserted[0];
+}
+
+export async function updateNotificationPreferencesForUser(input: {
+  smsEnabled: boolean;
+  phoneNumber: string | null;
+}) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  await getNotificationPreferencesForUser();
+
+  const updated = await db
+    .update(notificationPreferences)
+    .set({
+      // Email is required for the product. We keep it enabled.
+      emailEnabled: true,
+      smsEnabled: input.smsEnabled,
+      phoneNumber: input.phoneNumber,
+      updatedAt: new Date(),
+    })
+    .where(eq(notificationPreferences.userId, user.id))
+    .returning();
+
+  return updated[0];
+}
+
+/**
+ * Get the latest products from the /new page snapshot.
+ * These are the products we're currently monitoring.
+ */
+export async function getLatestProducts(limit = 40) {
+  const [latestBatch] = await db
+    .select({ lastCheckedAt: products.lastCheckedAt })
+    .from(products)
+    .where(isNotNull(products.lastCheckedAt))
+    .orderBy(desc(products.lastCheckedAt))
+    .limit(1);
+
+  if (!latestBatch?.lastCheckedAt) return [];
+
+  return await db
+    .select()
+    .from(products)
+    .where(eq(products.lastCheckedAt, latestBatch.lastCheckedAt))
+    .orderBy(desc(products.updatedAt), desc(products.createdAt))
+    .limit(limit);
+}
+
+/**
+ * Get recent new arrival events with product details.
+ */
+export async function getRecentNewArrivals(limit = 40) {
+  return await db
+    .select({
+      id: stockEvents.id,
+      detectedAt: stockEvents.detectedAt,
+      notifiedAt: stockEvents.notifiedAt,
+      productId: products.id,
+      productName: products.name,
+      productUrl: products.url,
+      productImageUrl: products.imageUrl,
+    })
+    .from(stockEvents)
+    .innerJoin(products, eq(stockEvents.productId, products.id))
+    .orderBy(desc(stockEvents.detectedAt))
+    .limit(limit);
 }

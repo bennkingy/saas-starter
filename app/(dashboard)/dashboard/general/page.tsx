@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { updateAccount } from '@/app/(login)/actions';
+import { Loader2, Lock, Trash2 } from 'lucide-react';
+import { updateAccount, updatePassword, deleteAccount } from '@/app/(login)/actions';
 import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
@@ -15,6 +15,20 @@ const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type ActionState = {
   name?: string;
+  error?: string;
+  success?: string;
+};
+
+type PasswordState = {
+  currentPassword?: string;
+  newPassword?: string;
+  confirmPassword?: string;
+  error?: string;
+  success?: string;
+};
+
+type DeleteState = {
+  password?: string;
   error?: string;
   success?: string;
 };
@@ -73,10 +87,23 @@ function AccountFormWithData({ state }: { state: ActionState }) {
 }
 
 export default function GeneralPage() {
-  const [state, formAction, isPending] = useActionState<ActionState, FormData>(
+  const [accountState, accountAction, isAccountPending] = useActionState<
+    ActionState,
+    FormData
+  >(
     updateAccount,
     {}
   );
+
+  const [passwordState, passwordAction, isPasswordPending] = useActionState<
+    PasswordState,
+    FormData
+  >(updatePassword, {});
+
+  const [deleteState, deleteAction, isDeletePending] = useActionState<
+    DeleteState,
+    FormData
+  >(deleteAccount, {});
 
   return (
     <section className="flex-1 p-4 lg:p-8">
@@ -84,33 +111,161 @@ export default function GeneralPage() {
         General Settings
       </h1>
 
-      <Card>
+      <Card className="mb-8">
         <CardHeader>
           <CardTitle>Account Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" action={formAction}>
-            <Suspense fallback={<AccountForm state={state} />}>
-              <AccountFormWithData state={state} />
+          <form className="space-y-4" action={accountAction}>
+            <Suspense fallback={<AccountForm state={accountState} />}>
+              <AccountFormWithData state={accountState} />
             </Suspense>
-            {state.error && (
-              <p className="text-red-500 text-sm">{state.error}</p>
+            {accountState.error && (
+              <p className="text-red-500 text-sm">{accountState.error}</p>
             )}
-            {state.success && (
-              <p className="text-green-500 text-sm">{state.success}</p>
+            {accountState.success && (
+              <p className="text-green-500 text-sm">{accountState.success}</p>
             )}
             <Button
               type="submit"
-              className="bg-orange-500 hover:bg-orange-600 text-white"
-              disabled={isPending}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              disabled={isAccountPending}
             >
-              {isPending ? (
+              {isAccountPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Saving...
                 </>
               ) : (
                 'Save Changes'
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>Password</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" action={passwordAction}>
+            <div>
+              <Label htmlFor="current-password" className="mb-2">
+                Current Password
+              </Label>
+              <Input
+                id="current-password"
+                name="currentPassword"
+                type="password"
+                autoComplete="current-password"
+                required
+                minLength={8}
+                maxLength={100}
+                defaultValue={passwordState.currentPassword}
+              />
+            </div>
+            <div>
+              <Label htmlFor="new-password" className="mb-2">
+                New Password
+              </Label>
+              <Input
+                id="new-password"
+                name="newPassword"
+                type="password"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                maxLength={100}
+                defaultValue={passwordState.newPassword}
+              />
+            </div>
+            <div>
+              <Label htmlFor="confirm-password" className="mb-2">
+                Confirm New Password
+              </Label>
+              <Input
+                id="confirm-password"
+                name="confirmPassword"
+                type="password"
+                required
+                minLength={8}
+                maxLength={100}
+                defaultValue={passwordState.confirmPassword}
+              />
+            </div>
+            {passwordState.error ? (
+              <p className="text-red-500 text-sm">{passwordState.error}</p>
+            ) : null}
+            {passwordState.success ? (
+              <p className="text-green-500 text-sm">{passwordState.success}</p>
+            ) : null}
+            <Button
+              type="submit"
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+              disabled={isPasswordPending}
+            >
+              {isPasswordPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                <>
+                  <Lock className="mr-2 h-4 w-4" />
+                  Update Password
+                </>
+              )}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Delete Account</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500 mb-4">
+            Account deletion is non-reversable. Please proceed with caution.
+          </p>
+          <form action={deleteAction} className="space-y-4">
+            <div>
+              <Label htmlFor="delete-password" className="mb-2">
+                Confirm Password
+              </Label>
+              <Input
+                id="delete-password"
+                name="password"
+                type="password"
+                required
+                minLength={8}
+                maxLength={100}
+                defaultValue={deleteState.password}
+              />
+            </div>
+            {deleteState.error ? (
+              <p className="text-red-500 text-sm">{deleteState.error}</p>
+            ) : null}
+            {deleteState.success ? (
+              <p className="text-green-500 text-sm">{deleteState.success}</p>
+            ) : null}
+            <Button
+              type="submit"
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-700"
+              disabled={isDeletePending}
+            >
+              {isDeletePending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete Account
+                </>
               )}
             </Button>
           </form>
