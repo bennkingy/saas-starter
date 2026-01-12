@@ -15,8 +15,8 @@ export const metadata: Metadata = {
   applicationName: SITE_NAME,
   icons: {
     icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/favicon.ico', type: 'image/x-icon' }
+      { url: '/favicon.svg', type: 'image/svg+xml' },
+      { url: '/icon.svg', type: 'image/svg+xml' }
     ]
   },
   keywords: [

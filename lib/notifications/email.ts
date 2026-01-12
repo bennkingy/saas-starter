@@ -1,6 +1,6 @@
 import 'server-only';
 
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 type SendNewArrivalEmailArgs = {
   to: string;
@@ -9,25 +9,22 @@ type SendNewArrivalEmailArgs = {
   imageUrl?: string | null;
 };
 
-function getEmailEnv() {
-  const host = process.env.SMTP_HOST;
-  const portRaw = process.env.SMTP_PORT;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASSWORD;
-  const from = process.env.SMTP_FROM;
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+  const fromEmail = process.env.RESEND_FROM_EMAIL;
 
-  if (!host || !portRaw || !user || !pass || !from) {
-    throw new Error(
-      'Missing email env vars. Set SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, SMTP_FROM.'
-    );
+  if (!apiKey) {
+    throw new Error('Missing RESEND_API_KEY environment variable.');
   }
 
-  const port = Number(portRaw);
-  if (!Number.isFinite(port)) {
-    throw new Error('SMTP_PORT must be a number.');
+  if (!fromEmail) {
+    throw new Error('Missing RESEND_FROM_EMAIL environment variable.');
   }
 
-  return { host, port, user, pass, from };
+  return {
+    client: new Resend(apiKey),
+    from: fromEmail,
+  };
 }
 
 export async function sendNewArrivalEmail({
@@ -36,14 +33,7 @@ export async function sendNewArrivalEmail({
   productUrl,
   imageUrl,
 }: SendNewArrivalEmailArgs) {
-  const env = getEmailEnv();
-
-  const transporter = nodemailer.createTransport({
-    host: env.host,
-    port: env.port,
-    secure: env.port === 465,
-    auth: { user: env.user, pass: env.pass },
-  });
+  const { client, from } = getResendClient();
 
   const subject = `🎉 New Jellycat Alert: ${productName}`;
   const text = `New Jellycat just dropped!\n\n${productName} has just been added to the Jellycat store.\n\nGrab it now: ${productUrl}\n`;
@@ -69,11 +59,18 @@ export async function sendNewArrivalEmail({
     </div>
   `;
 
-  await transporter.sendMail({
-    from: env.from,
+  const { error } = await client.emails.send({
+    from,
     to,
     subject,
     text,
     html,
   });
+
+  if (error) {
+    const helpfulMessage = error.message.includes('domain is not verified')
+      ? `${error.message}. For testing without a custom domain, use 'onboarding@resend.dev' as RESEND_FROM_EMAIL.`
+      : error.message;
+    throw new Error(`Failed to send email: ${helpfulMessage}`);
+  }
 }

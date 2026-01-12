@@ -3,6 +3,7 @@ import { ArrowRight, Bell, Search, Sparkles } from 'lucide-react';
 import { getRecentNewArrivals } from '@/lib/db/queries';
 import { JELLYCAT_NEW_URL } from '@/lib/config/products';
 import { HeroParallaxImage } from './_components/hero-parallax-image';
+import { LogoPatternBg } from '@/components/site/logo-pattern-bg';
 
 function formatRelativeTime(date: Date) {
   const now = new Date();
@@ -56,7 +57,8 @@ export default async function HomePage() {
 
   return (
     <main>
-      <section className="relative py-20 overflow-hidden">
+      <section className="relative py-20 overflow-hidden bg-gradient-to-b from-white to-gray-50">
+        <div className="pointer-events-none absolute -right-28 -top-28 h-[27rem] w-[27rem] rounded-full bg-primary/10 blur-3xl" />
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute -top-32 left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
           <div className="absolute -bottom-40 -right-32 h-[28rem] w-[28rem] rounded-full bg-primary/10 blur-3xl" />
@@ -74,8 +76,8 @@ export default async function HomePage() {
                 shows up. SMS is optional on the Plus plan.
               </p>
               <div className="mt-8 flex flex-col items-center gap-3 lg:items-start">
-                <a href="/pricing">
-                  <Button size="lg" className="text-lg rounded-full">
+                <a href="/pricing" className="!cursor-pointer">
+                  <Button size="lg" className="text-lg rounded-full cursor-pointer">
                     Get new arrival alerts
                     <ArrowRight className="ml-2 h-5 w-5" />
                   </Button>
@@ -94,13 +96,15 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="relative py-16 w-full border-t border-gray-100 bg-gradient-to-b from-white to-gray-50 overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 -z-10">
+      <section className="relative py-16 w-full border-t border-gray-100 overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-b from-white to-gray-50" />
+        <LogoPatternBg />
+        <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-40 left-1/2 h-[30rem] w-[30rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
           <div className="absolute -bottom-44 -right-40 h-[26rem] w-[26rem] rounded-full bg-primary/10 blur-3xl" />
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mx-auto max-w-2xl text-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-700 shadow-sm">
               <span className="h-2 w-2 rounded-full bg-primary" />
@@ -129,9 +133,6 @@ export default async function HomePage() {
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
                       <step.Icon className="h-5 w-5" aria-hidden="true" />
                     </div>
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-semibold">
-                      {step.step}
-                    </div>
                   </div>
                 </div>
 
@@ -157,8 +158,11 @@ export default async function HomePage() {
                 The most recent Jellycats we detected on the New page.
               </p>
             </div>
-            <a href="/dashboard/alerts" className="text-sm text-gray-700 underline">
-              View all alerts
+            <a href="/dashboard/alerts">
+              <Button variant="outline" className="rounded-full cursor-pointer">
+                View all alerts
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </a>
           </div>
 
@@ -170,7 +174,7 @@ export default async function HomePage() {
                   href={arrival.productUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="group relative isolate overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 before:absolute before:inset-0 before:z-0 before:origin-bottom before:scale-y-0 before:bg-primary before:transition-transform before:duration-300 before:content-[''] group-hover:before:scale-y-100"
+                  className="group relative isolate overflow-hidden rounded-2xl border border-gray-200 bg-white p-4 transition-colors hover:border-gray-300 before:absolute before:inset-0 before:z-0 before:origin-bottom before:scale-y-0 before:bg-primary before:transition-transform before:duration-300 before:content-[''] hover:before:scale-y-100"
                 >
                   <div className="relative z-10 aspect-square w-full overflow-hidden rounded-xl bg-gray-50">
                     {arrival.productImageUrl ? (

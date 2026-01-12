@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
-import { BellRing, Cat, LogOut, Mail } from 'lucide-react';
+import { BellRing, LogOut, Mail } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,7 @@ import { useRouter } from 'next/navigation';
 import { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
 import { SiteFooter } from '@/components/site/footer';
+import { SiteLogo } from '@/components/site/site-logo';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -116,17 +117,7 @@ function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-gray-200/70 bg-white/70 backdrop-blur-md backdrop-saturate-150">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-        <Link href="/" className="flex items-center">
-          <span className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-            <Cat className="h-5 w-5" />
-            <span className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-primary ring-1 ring-gray-200">
-              <BellRing className="h-2.5 w-2.5" />
-            </span>
-          </span>
-          <span className="ml-2 text-xl font-semibold text-gray-900">
-            Jellycat Alerts
-          </span>
-        </Link>
+        <SiteLogo variant="header" href="/" />
         <div className="flex items-center space-x-4">
           <Suspense fallback={<div className="h-9" />}>
             <UserMenu />

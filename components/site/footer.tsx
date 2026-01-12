@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { BellRing, Cat } from 'lucide-react';
+import { SiteLogo } from './site-logo';
 
 export function SiteFooter() {
   return (
@@ -7,15 +7,7 @@ export function SiteFooter() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-base font-bold text-slate-900">
-              <span className="relative inline-flex h-8 w-8 items-center justify-center rounded-xl bg-slate-900/10 ring-1 ring-slate-900/10">
-                <Cat className="h-5 w-5 text-slate-900" />
-                <span className="absolute -right-1 -top-1 inline-flex h-4 w-4 items-center justify-center rounded-full bg-white text-[#34cde5]">
-                  <BellRing className="h-2.5 w-2.5" />
-                </span>
-              </span>
-              <span>Jellycat Alerts</span>
-            </div>
+            <SiteLogo variant="footer" />
             <div className="mt-1 text-sm font-medium text-slate-900/80">
               Friendly alerts for new arrivals and restocks.
             </div>

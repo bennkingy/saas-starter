@@ -1,4 +1,5 @@
 import 'server-only';
+import twilio from 'twilio';
 
 export type SmsSendArgs = {
   to: string;
@@ -12,20 +13,17 @@ export type SmsProvider = {
 class MissingSmsProviderError extends Error {
   constructor() {
     super(
-      'SMS provider is not configured. TODO: plug in Twilio (or another provider) and set env vars.'
+      'SMS provider is not configured. Set TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_PHONE_NUMBER.'
     );
   }
 }
 
 export function createSmsProviderFromEnv(): SmsProvider {
-  /**
-   * TODO: Implement Twilio provider.
-   * Keep this abstract so we can swap providers later.
-   */
-  const isConfigured =
-    Boolean(process.env.TWILIO_ACCOUNT_SID) &&
-    Boolean(process.env.TWILIO_AUTH_TOKEN) &&
-    Boolean(process.env.TWILIO_PHONE_NUMBER);
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+
+  const isConfigured = Boolean(accountSid) && Boolean(authToken) && Boolean(fromNumber);
 
   if (!isConfigured) {
     return {
@@ -35,9 +33,15 @@ export function createSmsProviderFromEnv(): SmsProvider {
     };
   }
 
+  const client = twilio(accountSid, authToken);
+
   return {
-    send: async () => {
-      throw new MissingSmsProviderError();
+    send: async ({ to, body }) => {
+      await client.messages.create({
+        body,
+        from: fromNumber,
+        to,
+      });
     },
   };
 }

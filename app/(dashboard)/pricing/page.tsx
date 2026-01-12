@@ -37,14 +37,14 @@ export default async function PricingPage() {
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
         <div className="pt-6 rounded-2xl border border-gray-200 bg-white p-6">
-          <h2 className="text-2xl font-medium text-gray-900 mb-2">Free</h2>
+          <h2 className="text-2xl font-medium text-gray-900 mb-2">Basic</h2>
           <p className="text-sm text-gray-600 mb-4">Email alerts are free — just create an account.</p>
           <p className="text-4xl font-medium text-gray-900 mb-6">Free</p>
           <ul className="space-y-4 mb-8">
             {[
-              'Email alerts (free)',
+              'Email alerts',
               'Instant new arrival notifications',
-              'See latest products and recent arrivals in your dashboard',
+              'See all latest alerts in your dashboard',
             ].map((feature) => (
               <li key={feature} className="flex items-start">
                 <Check className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
@@ -70,9 +70,8 @@ export default async function PricingPage() {
           interval={proPrice?.interval || 'month'}
           trialDays={7}
           features={[
-            'Everything in Free, plus:',
-            'SMS alerts (optional)',
-            'SMS delivery preferences',
+            'Everything in free, plus:',
+            'SMS alerts',
           ]}
           priceId={proPrice?.id}
           isConfigured={Boolean(proPlan?.id && proPrice?.id)}
