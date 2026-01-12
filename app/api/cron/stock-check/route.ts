@@ -57,9 +57,11 @@ async function runNewArrivalsCheck(request: Request) {
    * - Compare against previously seen products
    * - If new products appear, create stock events and notify all subscribers
    */
+  console.log('[cron] Fetching new products snapshot...');
   const snapshot = await fetchNewProductsSnapshot();
 
   if (snapshot.notModified) {
+    console.log('[cron] Snapshot not modified (304)');
     return NextResponse.json({
       notModified: true,
       productsFound: 0,
@@ -68,9 +70,12 @@ async function runNewArrivalsCheck(request: Request) {
     });
   }
 
+  console.log(`[cron] Found ${snapshot.products.length} products in snapshot`);
   const { newArrivals } = await syncProductsAndDetectNewArrivals(snapshot);
+  console.log(`[cron] Detected ${newArrivals.length} new arrivals`);
   
   if (isDryRun) {
+    console.log('[cron] Dry run mode - skipping notifications');
     return NextResponse.json({
       dryRun: true,
       productsFound: snapshot.products.length,
@@ -81,13 +86,29 @@ async function runNewArrivalsCheck(request: Request) {
     });
   }
 
-  const { notifiedEventIds } = await notifySubscribersOfNewArrivals({ newArrivals });
+  console.log(`[cron] Calling notifier with ${newArrivals.length} new arrivals`);
+  try {
+    const { notifiedEventIds } = await notifySubscribersOfNewArrivals({ newArrivals });
+    console.log(`[cron] Notifier returned ${notifiedEventIds.length} notified event IDs`);
 
-  return NextResponse.json({
-    productsFound: snapshot.products.length,
-    newArrivalsDetected: newArrivals.length,
-    eventsNotified: notifiedEventIds.length,
-  });
+    return NextResponse.json({
+      productsFound: snapshot.products.length,
+      newArrivalsDetected: newArrivals.length,
+      eventsNotified: notifiedEventIds.length,
+    });
+  } catch (error) {
+    console.error('[cron] Error in notifier:', error);
+    return NextResponse.json(
+      {
+        error: 'Failed to send notifications',
+        details: error instanceof Error ? error.message : String(error),
+        productsFound: snapshot.products.length,
+        newArrivalsDetected: newArrivals.length,
+        eventsNotified: 0,
+      },
+      { status: 500 }
+    );
+  }
   } finally {
     await releaseCronLock();
   }

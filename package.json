@@ -7,9 +7,15 @@
     "db:setup": "npx tsx lib/db/setup.ts",
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:delete-fake-product": "npx tsx scripts/delete-fake-product.ts",
+    "db:clear-products": "npx tsx scripts/clear-all-products.ts",
+    "db:diagnose": "npx tsx scripts/diagnose-notifications.ts",
+    "db:release-lock": "npx tsx scripts/release-cron-lock.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
+    "db:reset-notified-events": "npx tsx scripts/reset-notified-events.ts",
+    "db:check-events": "npx tsx scripts/check-stock-events.ts",
+    "db:remove-test-emails": "npx tsx scripts/remove-test-emails.ts",
     "cron": "npx tsx scripts/run-cron.ts"
   },
   "dependencies": {
