@@ -1,19 +1,19 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { getTeamForUser, getLatestProducts, getRecentNewArrivals } from '@/lib/db/queries';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { getTeamForUser, getAllProductItems } from "@/lib/db/queries";
 
 function formatDateTime(value: Date | null) {
-  if (!value) return '—';
+  if (!value) return "—";
   return value.toLocaleString();
 }
 
 function formatProductDisplayName(rawName: string) {
   const cleanedName = rawName
     .trim()
-    .split(',')
+    .split(",")
     .at(0)
-    ?.replaceAll('-', ' ')
-    .replace(/\s+/g, ' ')
+    ?.replaceAll("-", " ")
+    .replace(/\s+/g, " ")
     .trim();
 
   return cleanedName ?? rawName;
@@ -26,38 +26,47 @@ function formatRelativeTime(date: Date) {
   const diffHours = Math.floor(diffMins / 60);
   const diffDays = Math.floor(diffHours / 24);
 
-  if (diffMins < 1) return 'Just now';
+  if (diffMins < 1) return "Just now";
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   return `${diffDays}d ago`;
 }
 
-function recentArrivalsMatchTopOfLatestProducts(
-  recentArrivals: Array<{
-    productName: string;
-    productUrl: string;
-    productImageUrl: string | null;
-  }>,
-  latestProducts: Array<{
-    name: string;
-    url: string;
-    imageUrl: string | null;
-  }>
-) {
-  if (recentArrivals.length === 0) return false;
-  if (latestProducts.length === 0) return false;
-  if (recentArrivals.length > latestProducts.length) return false;
+function formatDateGroup(date: Date) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const itemDate = new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+  const diffDays = Math.floor(
+    (today.getTime() - itemDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
 
-  return recentArrivals.every((arrival, index) => {
-    const product = latestProducts[index];
-    if (!product) return false;
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return date.toLocaleDateString();
+}
 
-    return (
-      arrival.productUrl === product.url &&
-      arrival.productName === product.name &&
-      arrival.productImageUrl === product.imageUrl
-    );
+function groupItemsByDate<T extends { createdDate: Date }>(items: T[]) {
+  const grouped = new Map<string, T[]>();
+
+  items.forEach((item) => {
+    const dateKey = item.createdDate.toISOString().split("T")[0];
+    if (!grouped.has(dateKey)) {
+      grouped.set(dateKey, []);
+    }
+    grouped.get(dateKey)!.push(item);
   });
+
+  return Array.from(grouped.entries())
+    .map(([dateKey, items]) => ({
+      date: new Date(dateKey),
+      items,
+    }))
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
 }
 
 export default async function AlertsPage() {
@@ -66,104 +75,77 @@ export default async function AlertsPage() {
     return null;
   }
 
-  const latestProducts = await getLatestProducts();
-  const recentArrivals = await getRecentNewArrivals();
-  const shouldHideLatestProductsSection = recentArrivalsMatchTopOfLatestProducts(
-    recentArrivals,
-    latestProducts
-  );
+  const allItems = await getAllProductItems();
+  const groupedItems = groupItemsByDate(allItems);
 
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
-        New Jellycat Alerts
+        Alerts
       </h1>
 
-      {recentArrivals.length > 0 && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Recent New Arrivals</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              {recentArrivals.map((arrival) => (
-                <li
-                  key={arrival.id}
-                  className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3 bg-white"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    {arrival.productImageUrl && (
-                      <img
-                        src={arrival.productImageUrl}
-                        alt={formatProductDisplayName(arrival.productName)}
-                        className="w-12 h-12 object-cover rounded"
-                      />
-                    )}
-                    <div className="min-w-0">
-                      <p className="font-medium text-gray-900 truncate">
-                        {formatProductDisplayName(arrival.productName)}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Detected {formatRelativeTime(arrival.detectedAt)}
-                      </p>
-                    </div>
-                  </div>
-                  <a href={arrival.productUrl} target="_blank" rel="noreferrer">
-                    <Button variant="outline" size="sm">
-                      View
-                    </Button>
-                  </a>
-                </li>
-              ))}
-            </ul>
+      {groupedItems.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-sm text-gray-600">
+              No products scraped yet. The first check will populate this list.
+            </p>
           </CardContent>
         </Card>
-      )}
-
-      {!shouldHideLatestProductsSection && (
+      ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Latest Products on /new</CardTitle>
+            <CardTitle>Newest Arrivals</CardTitle>
           </CardHeader>
           <CardContent>
-            {latestProducts.length === 0 ? (
-              <p className="text-sm text-gray-600">
-                No products scraped yet. The first check will populate this list.
-              </p>
-            ) : (
-              <ul className="space-y-3">
-                {latestProducts.map((product) => (
-                  <li
-                    key={product.id}
-                    className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border border-gray-200 rounded-lg p-4 bg-white"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      {product.imageUrl && (
-                        <img
-                          src={product.imageUrl}
-                          alt={formatProductDisplayName(product.name)}
-                          className="w-14 h-14 object-cover rounded"
-                        />
-                      )}
-                      <div className="min-w-0">
-                        <p className="font-medium text-gray-900 truncate">
-                          {formatProductDisplayName(product.name)}
-                        </p>
-                        <p className="text-xs text-gray-600">
-                          Last seen: {formatDateTime(product.lastCheckedAt)}
-                        </p>
-                      </div>
-                    </div>
-
-                    <a href={product.url} target="_blank" rel="noreferrer">
-                      <Button variant="outline" size="sm">
-                        View
-                      </Button>
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            )}
+            <div className="space-y-8">
+              {groupedItems.map((group) => (
+                <div key={group.date.toISOString()}>
+                  <h2 className="text-sm font-semibold text-gray-700 mb-4">
+                    {formatDateGroup(group.date)}
+                  </h2>
+                  <ul className="space-y-3">
+                    {group.items.map((item) => (
+                      <li
+                        key={item.id}
+                        className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3 bg-white"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {item.imageUrl && (
+                            <img
+                              src={item.imageUrl}
+                              alt={formatProductDisplayName(item.name)}
+                              className="w-12 h-12 object-cover rounded"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-medium text-gray-900 truncate">
+                              {formatProductDisplayName(item.name)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {item.lastCheckedAt &&
+                              item.lastCheckedAt.getTime() !==
+                                item.createdDate.getTime()
+                                ? `Last seen: ${formatDateTime(
+                                    item.lastCheckedAt
+                                  )}`
+                                : `Detected ${formatRelativeTime(
+                                    item.createdDate
+                                  )}`}
+                            </p>
+                          </div>
+                        </div>
+                        <a href={item.url} target="_blank" rel="noreferrer">
+                          <Button variant="outline" size="sm">
+                            View
+                          </Button>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

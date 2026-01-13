@@ -66,7 +66,7 @@ async function runNewArrivalsCheck(request: Request) {
       notModified: true,
       productsFound: 0,
       newArrivalsDetected: 0,
-      eventsNotified: 0,
+      productsNotified: 0,
     });
   }
 
@@ -82,19 +82,19 @@ async function runNewArrivalsCheck(request: Request) {
       products: snapshot.products,
       newArrivalsDetected: newArrivals.length,
       newArrivals,
-      eventsNotified: 0,
+      productsNotified: 0,
     });
   }
 
   console.log(`[cron] Calling notifier with ${newArrivals.length} new arrivals`);
   try {
-    const { notifiedEventIds } = await notifySubscribersOfNewArrivals({ newArrivals });
-    console.log(`[cron] Notifier returned ${notifiedEventIds.length} notified event IDs`);
+    const { notifiedProductIds } = await notifySubscribersOfNewArrivals({ newArrivals });
+    console.log(`[cron] Notifier returned ${notifiedProductIds.length} notified product IDs`);
 
     return NextResponse.json({
       productsFound: snapshot.products.length,
       newArrivalsDetected: newArrivals.length,
-      eventsNotified: notifiedEventIds.length,
+      productsNotified: notifiedProductIds.length,
     });
   } catch (error) {
     console.error('[cron] Error in notifier:', error);
@@ -104,7 +104,7 @@ async function runNewArrivalsCheck(request: Request) {
         details: error instanceof Error ? error.message : String(error),
         productsFound: snapshot.products.length,
         newArrivalsDetected: newArrivals.length,
-        eventsNotified: 0,
+        productsNotified: 0,
       },
       { status: 500 }
     );

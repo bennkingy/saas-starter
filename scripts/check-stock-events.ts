@@ -1,38 +1,37 @@
 import { db } from '../lib/db/drizzle';
-import { stockEvents, products } from '../lib/db/schema';
-import { eq } from 'drizzle-orm';
+import { products } from '../lib/db/schema';
+import { isNotNull } from 'drizzle-orm';
 
 async function main() {
-  const allEvents = await db
+  const allProducts = await db
     .select({
-      id: stockEvents.id,
-      productId: stockEvents.productId,
-      detectedAt: stockEvents.detectedAt,
-      notifiedAt: stockEvents.notifiedAt,
-      productName: products.name,
+      id: products.id,
+      name: products.name,
+      createdAt: products.createdAt,
+      notifiedAt: products.notifiedAt,
     })
-    .from(stockEvents)
-    .innerJoin(products, eq(products.id, stockEvents.productId));
+    .from(products)
+    .where(isNotNull(products.lastCheckedAt));
 
-  // Sort by detectedAt descending (newest first)
-  allEvents.sort((a, b) => b.detectedAt.getTime() - a.detectedAt.getTime());
+  // Sort by createdAt descending (newest first)
+  allProducts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
-  console.log(`\n📬 Total stock events: ${allEvents.length}`);
+  console.log(`\n📦 Total products: ${allProducts.length}`);
   
-  const pending = allEvents.filter((e) => e.notifiedAt === null);
-  const notified = allEvents.filter((e) => e.notifiedAt !== null);
+  const pending = allProducts.filter((p) => p.notifiedAt === null);
+  const notified = allProducts.filter((p) => p.notifiedAt !== null);
 
   console.log(`   - Pending (notifiedAt = null): ${pending.length}`);
   console.log(`   - Notified (notifiedAt set): ${notified.length}`);
 
-  if (allEvents.length > 0) {
-    console.log('\n📋 Recent events:');
-    allEvents.slice(-10).forEach((e) => {
-      const status = e.notifiedAt ? '✅ Notified' : '⏳ Pending';
-      console.log(`   ${status} - Event #${e.id} - ${e.productName}`);
-      console.log(`      Detected: ${e.detectedAt}`);
-      if (e.notifiedAt) {
-        console.log(`      Notified: ${e.notifiedAt}`);
+  if (allProducts.length > 0) {
+    console.log('\n📋 Recent products:');
+    allProducts.slice(0, 10).forEach((p) => {
+      const status = p.notifiedAt ? '✅ Notified' : '⏳ Pending';
+      console.log(`   ${status} - Product #${p.id} - ${p.name}`);
+      console.log(`      Created: ${p.createdAt}`);
+      if (p.notifiedAt) {
+        console.log(`      Notified: ${p.notifiedAt}`);
       }
     });
   }

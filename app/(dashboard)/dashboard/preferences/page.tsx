@@ -1,15 +1,25 @@
-'use client';
+"use client";
 
-import { useActionState, Suspense } from 'react';
-import useSWR from 'swr';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import type { NotificationPreferences, TeamDataWithMembers, User } from '@/lib/db/schema';
-import { JELLYCAT_NEW_URL } from '@/lib/config/products';
-import { updateNotificationPreferencesAction } from './actions';
+import { useActionState, Suspense } from "react";
+import useSWR from "swr";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import type {
+  NotificationPreferences,
+  TeamDataWithMembers,
+  User,
+} from "@/lib/db/schema";
+import { JELLYCAT_NEW_URL } from "@/lib/config/products";
+import { updateNotificationPreferencesAction } from "./actions";
 
 type ActionState = {
   error?: string;
@@ -21,11 +31,11 @@ type ActionState = {
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 function isActiveSubscription(status: string | null | undefined) {
-  return status === 'active' || status === 'trialing';
+  return status === "active" || status === "trialing";
 }
 
 function isProPlan(planName: string | null | undefined) {
-  return (planName ?? '').toLowerCase() === 'pro';
+  return (planName ?? "").toLowerCase() === "pro";
 }
 
 function PreferencesFormSkeleton() {
@@ -47,10 +57,10 @@ function PreferencesFormSkeleton() {
 }
 
 function PreferencesForm({ state }: { state: ActionState }) {
-  const { data: user } = useSWR<User>('/api/user', fetcher);
-  const { data: team } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
+  const { data: user } = useSWR<User>("/api/user", fetcher);
+  const { data: team } = useSWR<TeamDataWithMembers>("/api/team", fetcher);
   const { data: prefs } = useSWR<NotificationPreferences>(
-    '/api/notification-preferences',
+    "/api/notification-preferences",
     fetcher
   );
 
@@ -59,13 +69,13 @@ function PreferencesForm({ state }: { state: ActionState }) {
   const smsAvailable = subscriptionActive && proPlan;
 
   const smsUnavailableReason = !subscriptionActive
-    ? 'Active subscription required.'
+    ? "Active subscription required."
     : !proPlan
-      ? 'Pro plan only.'
-      : null;
+    ? "Disabled."
+    : null;
 
   const smsEnabledValue = prefs?.smsEnabled ?? false;
-  const phoneNumberValue = prefs?.phoneNumber ?? '';
+  const phoneNumberValue = prefs?.phoneNumber ?? "";
 
   return (
     <>
@@ -77,14 +87,14 @@ function PreferencesForm({ state }: { state: ActionState }) {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-medium text-gray-900">
-                Status:{' '}
-                <span className="capitalize">
-                  {team?.subscriptionStatus || 'free plan'}
+                Status:{" "}
+                <span className="capitalize mb-3 block">
+                  {team?.subscriptionStatus || "free plan"}
                 </span>
               </p>
               <p className="text-sm text-gray-600">Email alerts: Enabled</p>
               <p className="text-sm text-gray-600">
-                SMS alerts: {smsAvailable ? 'available' : 'Pro plan only'}
+                SMS alerts: {smsAvailable ? "available" : "Disabled"}
               </p>
             </div>
             <Button asChild>
@@ -101,9 +111,10 @@ function PreferencesForm({ state }: { state: ActionState }) {
         <CardContent className="space-y-6">
           <div>
             <Label className="mb-2">Email (required)</Label>
-            <Input value={user?.email ?? ''} readOnly />
+            <Input value={user?.email ?? ""} readOnly />
             <p className="text-xs text-gray-600 mt-2">
-              Email alerts are free and always enabled for new arrival notifications.
+              Email alerts are free and always enabled for new arrival
+              notifications.
             </p>
           </div>
 
@@ -145,7 +156,7 @@ function PreferencesForm({ state }: { state: ActionState }) {
               />
               {smsUnavailableReason ? (
                 <p className="text-xs text-gray-600 mt-2">
-                  {smsUnavailableReason}{' '}
+                  {smsUnavailableReason}{" "}
                   <a
                     href="/pricing"
                     className="text-primary underline underline-offset-4 hover:text-primary/90"
@@ -155,14 +166,16 @@ function PreferencesForm({ state }: { state: ActionState }) {
                 </p>
               ) : null}
               <p className="text-xs text-gray-600 mt-2">
-                TODO: SMS provider integration (Twilio) is scaffolded and must be
-                configured before sending.
+                TODO: SMS provider integration (Twilio) is scaffolded and must
+                be configured before sending.
               </p>
             </div>
           </div>
         </CardContent>
         <CardFooter className="flex flex-col items-start gap-2">
-          {state.error ? <p className="text-red-500 text-sm">{state.error}</p> : null}
+          {state.error ? (
+            <p className="text-red-500 text-sm">{state.error}</p>
+          ) : null}
           {state.success ? (
             <p className="text-green-600 text-sm">{state.success}</p>
           ) : null}
@@ -179,7 +192,7 @@ function PreferencesForm({ state }: { state: ActionState }) {
           <div className="space-y-3 text-sm text-gray-600">
             <p className="flex items-start gap-2">
               <span className="text-primary font-medium">1.</span>
-              We monitor the{' '}
+              We monitor the{" "}
               <a
                 href={JELLYCAT_NEW_URL}
                 target="_blank"
@@ -187,16 +200,18 @@ function PreferencesForm({ state }: { state: ActionState }) {
                 className="text-primary hover:text-primary/80 underline underline-offset-4"
               >
                 Jellycat New page
-              </a>{' '}
+              </a>{" "}
               for new product drops.
             </p>
             <p className="flex items-start gap-2">
               <span className="text-primary font-medium">2.</span>
-              When brand new Jellycats appear, we instantly alert all subscribers.
+              When brand new Jellycats appear, we instantly alert all
+              subscribers.
             </p>
             <p className="flex items-start gap-2">
               <span className="text-primary font-medium">3.</span>
-              No need to pick specific items—you'll hear about every new release!
+              No need to pick specific items—you'll hear about every new
+              release!
             </p>
           </div>
         </CardContent>
@@ -233,11 +248,10 @@ export default function PreferencesPage() {
               Saving...
             </>
           ) : (
-            'Save preferences'
+            "Save preferences"
           )}
         </Button>
       </form>
     </section>
   );
 }
-

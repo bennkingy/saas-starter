@@ -1,10 +1,10 @@
-import 'server-only';
+import "server-only";
 
-import * as cheerio from 'cheerio';
-import { JELLYCAT_NEW_URL } from '@/lib/config/products';
-import { db } from '@/lib/db/drizzle';
-import { scraperState } from '@/lib/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import * as cheerio from "cheerio";
+import { JELLYCAT_NEW_URL } from "@/lib/config/products";
+import { db } from "@/lib/db/drizzle";
+import { scraperState } from "@/lib/db/schema";
+import { eq, sql } from "drizzle-orm";
 
 export type NewProduct = {
   externalId: string;
@@ -20,7 +20,7 @@ export type NewProductsSnapshot = {
   notModified?: boolean;
 };
 
-const NEW_PAGE_STATE_KEY = 'jellycat:/new';
+const NEW_PAGE_STATE_KEY = "jellycat:/new";
 
 function sleep(ms: number) {
   return new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -86,7 +86,10 @@ async function fetchWithBackoff(
       return response;
     }
 
-    const delayMs = getBackoffDelayMs(attempt, response.headers.get('retry-after'));
+    const delayMs = getBackoffDelayMs(
+      attempt,
+      response.headers.get("retry-after")
+    );
     await sleep(delayMs);
     return await attemptFetch(attempt + 1);
   };
@@ -132,40 +135,45 @@ async function fetchNewPageHtml() {
   const existingState = await getNewPageRequestState();
 
   const headers: Record<string, string> = {
-    'user-agent': 'jellycatsalerts/1.0 (+stock-check)',
-    accept: 'text/html,application/xhtml+xml',
+    "user-agent": "jellycatsalerts/1.0 (+stock-check)",
+    accept: "text/html,application/xhtml+xml",
   };
 
   if (existingState?.etag) {
-    headers['if-none-match'] = existingState.etag;
+    headers["if-none-match"] = existingState.etag;
   }
 
   if (existingState?.lastModified) {
-    headers['if-modified-since'] = existingState.lastModified;
+    headers["if-modified-since"] = existingState.lastModified;
   }
 
   const response = await fetchWithBackoff(
     JELLYCAT_NEW_URL,
     {
       headers,
-      cache: 'no-store',
+      cache: "no-store",
     },
     { maxAttempts: 5, timeoutMs: 12_000 }
   );
 
   if (response.status === 304) {
-    return { notModified: true as const, html: '' };
+    return { notModified: true as const, html: "" };
   }
 
   if (!response.ok) {
     throw new Error(`Failed to fetch /new page (${response.status})`);
   }
 
-  const nextEtag = response.headers.get('etag') ?? existingState?.etag ?? null;
+  const nextEtag = response.headers.get("etag") ?? existingState?.etag ?? null;
   const nextLastModified =
-    response.headers.get('last-modified') ?? existingState?.lastModified ?? null;
+    response.headers.get("last-modified") ??
+    existingState?.lastModified ??
+    null;
 
-  if (nextEtag !== existingState?.etag || nextLastModified !== existingState?.lastModified) {
+  if (
+    nextEtag !== existingState?.etag ||
+    nextLastModified !== existingState?.lastModified
+  ) {
     await upsertNewPageRequestState({
       etag: nextEtag,
       lastModified: nextLastModified,
@@ -184,10 +192,10 @@ function extractProductIdFromUrl(url: string): string {
    * - https://jellycat.com/heart-dragon/ -> heart-dragon
    * - https://www.jellycat.com/eu/amuseable-croissant-a2croi/ -> a2croi
    */
-  const cleanUrl = url.replace(/\/$/, '');
-  const lastSegment = cleanUrl.split('/').pop() ?? cleanUrl;
+  const cleanUrl = url.replace(/\/$/, "");
+  const lastSegment = cleanUrl.split("/").pop() ?? cleanUrl;
 
-  const parts = lastSegment.split('-');
+  const parts = lastSegment.split("-");
   const lastPart = parts[parts.length - 1] ?? lastSegment;
   const hasDigit = /\d/.test(lastPart);
 
@@ -204,68 +212,61 @@ function parseProductsFromHtml(html: string): NewProduct[] {
    * BigCommerce "new" page renders product cards as anchors wrapping images.
    * Product URLs are typically single-segment slugs, e.g. /heart-dragon/
    */
-  $('a[href]')
-    .filter((_, element) => $(element).find('img').length > 0)
+  $("a[href]")
+    .filter((_, element) => $(element).find("img").length > 0)
     .each((index, element) => {
-    const $el = $(element);
-    const href = $el.attr('href');
-    
-    if (!href) return;
+      const $el = $(element);
+      const href = $el.attr("href");
 
-    const resolvedUrl = new URL(href, baseUrl).toString();
-    const pathname = new URL(resolvedUrl).pathname;
-    const pathSegments = pathname.split('/').filter(Boolean);
+      if (!href) return;
 
-    // Skip obvious non-product links
-    const isNonProduct =
-      pathname === '/' ||
-      pathname === '/new' ||
-      pathname === '/shop-all' ||
-      pathname === '/login.php' ||
-      pathname.startsWith('/collections/') ||
-      pathname.startsWith('/category/') ||
-      pathname.startsWith('/about') ||
-      pathname.startsWith('/help');
+      const resolvedUrl = new URL(href, baseUrl).toString();
+      const pathname = new URL(resolvedUrl).pathname;
+      const pathSegments = pathname.split("/").filter(Boolean);
 
-    if (isNonProduct) return;
+      // Skip obvious non-product links
+      const isNonProduct =
+        pathname === "/" ||
+        pathname === "/new" ||
+        pathname === "/shop-all" ||
+        pathname === "/login.php" ||
+        pathname.startsWith("/collections/") ||
+        pathname.startsWith("/category/") ||
+        pathname.startsWith("/about") ||
+        pathname.startsWith("/help");
 
-    // Product slugs on this site are a single path segment like /heart-dragon/
-    if (pathSegments.length !== 1) return;
+      if (isNonProduct) return;
 
-    // Get product name from image alt, title attribute, or nested text
-    const $img = $el.find('img').first();
-    const name = 
-      $img.attr('alt') || 
-      $el.attr('title') || 
-      $el.find('[class*="name"], [class*="title"]').text().trim() ||
-      $el.text().trim();
+      // Product slugs on this site are a single path segment like /heart-dragon/
+      if (pathSegments.length !== 1) return;
 
-    if (!name || name.length < 2) return;
+      // Get product name from image alt, title attribute, or nested text
+      const $img = $el.find("img").first();
+      const name =
+        $img.attr("alt") ||
+        $el.attr("title") ||
+        $el.find('[class*="name"], [class*="title"]').text().trim() ||
+        $el.text().trim();
 
-    // Get image URL
-    const imageUrl = $img.attr('src') || $img.attr('data-src');
+      if (!name || name.length < 2) return;
 
-    const $cardRoot =
-      $el.closest('li').length > 0
-        ? $el.closest('li')
-        : $el.closest('article').length > 0
-          ? $el.closest('article')
-          : $el.closest('div');
+      // Get image URL
+      const imageUrl = $img.attr("src") || $img.attr("data-src");
 
-    const externalId = extractProductIdFromUrl(resolvedUrl);
+      const externalId = extractProductIdFromUrl(resolvedUrl);
 
-    // Avoid duplicates (same product might appear multiple times)
-    const alreadyAdded = products.some(p => p.externalId === externalId);
-    if (alreadyAdded) return;
+      // Avoid duplicates (same product might appear multiple times)
+      const alreadyAdded = products.some((p) => p.externalId === externalId);
+      if (alreadyAdded) return;
 
-    products.push({
-      externalId,
-      name: name.substring(0, 255),
-      url: resolvedUrl,
-      imageUrl: imageUrl || undefined,
-      position: products.length,
+      products.push({
+        externalId,
+        name: name.substring(0, 255),
+        url: resolvedUrl,
+        imageUrl: imageUrl || undefined,
+        position: products.length,
+      });
     });
-  });
 
   return products;
 }

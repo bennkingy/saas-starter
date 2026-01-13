@@ -1,19 +1,18 @@
-import { desc, and, eq, isNull, isNotNull } from 'drizzle-orm';
-import { db } from './drizzle';
+import { desc, and, eq, isNull, isNotNull } from "drizzle-orm";
+import { db } from "./drizzle";
 import {
   activityLogs,
   notificationPreferences,
   products,
-  stockEvents,
   teamMembers,
   teams,
   users,
-} from './schema';
-import { cookies } from 'next/headers';
-import { verifyToken } from '@/lib/auth/session';
+} from "./schema";
+import { cookies } from "next/headers";
+import { verifyToken } from "@/lib/auth/session";
 
 export async function getUser() {
-  const sessionCookie = (await cookies()).get('session');
+  const sessionCookie = (await cookies()).get("session");
   if (!sessionCookie || !sessionCookie.value) {
     return null;
   }
@@ -22,7 +21,7 @@ export async function getUser() {
   if (
     !sessionData ||
     !sessionData.user ||
-    typeof sessionData.user.id !== 'number'
+    typeof sessionData.user.id !== "number"
   ) {
     return null;
   }
@@ -68,7 +67,7 @@ export async function updateTeamSubscription(
     .update(teams)
     .set({
       ...subscriptionData,
-      updatedAt: new Date()
+      updatedAt: new Date(),
     })
     .where(eq(teams.id, teamId));
 }
@@ -77,7 +76,7 @@ export async function getUserWithTeam(userId: number) {
   const result = await db
     .select({
       user: users,
-      teamId: teamMembers.teamId
+      teamId: teamMembers.teamId,
     })
     .from(users)
     .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
@@ -90,7 +89,7 @@ export async function getUserWithTeam(userId: number) {
 export async function getActivityLogs() {
   const user = await getUser();
   if (!user) {
-    throw new Error('User not authenticated');
+    throw new Error("User not authenticated");
   }
 
   return await db
@@ -99,7 +98,7 @@ export async function getActivityLogs() {
       action: activityLogs.action,
       timestamp: activityLogs.timestamp,
       ipAddress: activityLogs.ipAddress,
-      userName: users.name
+      userName: users.name,
     })
     .from(activityLogs)
     .leftJoin(users, eq(activityLogs.userId, users.id))
@@ -125,14 +124,14 @@ export async function getTeamForUser() {
                 columns: {
                   id: true,
                   name: true,
-                  email: true
-                }
-              }
-            }
-          }
-        }
-      }
-    }
+                  email: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
   });
 
   return result?.team || null;
@@ -141,7 +140,7 @@ export async function getTeamForUser() {
 export async function getNotificationPreferencesForUser() {
   const user = await getUser();
   if (!user) {
-    throw new Error('User not authenticated');
+    throw new Error("User not authenticated");
   }
 
   const existing = await db
@@ -168,7 +167,7 @@ export async function updateNotificationPreferencesForUser(input: {
 }) {
   const user = await getUser();
   if (!user) {
-    throw new Error('User not authenticated');
+    throw new Error("User not authenticated");
   }
 
   await getNotificationPreferencesForUser();
@@ -193,39 +192,50 @@ export async function updateNotificationPreferencesForUser(input: {
  * These are the products we're currently monitoring.
  */
 export async function getLatestProducts(limit = 40) {
-  const [latestBatch] = await db
-    .select({ lastCheckedAt: products.lastCheckedAt })
-    .from(products)
-    .where(isNotNull(products.lastCheckedAt))
-    .orderBy(desc(products.lastCheckedAt))
-    .limit(1);
-
-  if (!latestBatch?.lastCheckedAt) return [];
-
   return await db
     .select()
     .from(products)
-    .where(eq(products.lastCheckedAt, latestBatch.lastCheckedAt))
-    .orderBy(desc(products.updatedAt), desc(products.createdAt))
+    .where(isNotNull(products.lastCheckedAt))
+    .orderBy(desc(products.lastCheckedAt))
     .limit(limit);
 }
 
 /**
- * Get recent new arrival events with product details.
+ * Get all products for display, grouped by createdAt (when first detected).
+ */
+export async function getAllProductItems(limit = 80) {
+  return await db
+    .select({
+      id: products.id,
+      name: products.name,
+      url: products.url,
+      imageUrl: products.imageUrl,
+      createdDate: products.createdAt,
+      lastCheckedAt: products.lastCheckedAt,
+    })
+    .from(products)
+    .where(isNotNull(products.lastCheckedAt))
+    .orderBy(desc(products.createdAt))
+    .limit(limit);
+}
+
+/**
+ * Get recent new arrival products.
+ * Returns the most recently created products.
  */
 export async function getRecentNewArrivals(limit = 40) {
   return await db
     .select({
-      id: stockEvents.id,
-      detectedAt: stockEvents.detectedAt,
-      notifiedAt: stockEvents.notifiedAt,
+      id: products.id,
+      detectedAt: products.createdAt,
+      notifiedAt: products.notifiedAt,
       productId: products.id,
       productName: products.name,
       productUrl: products.url,
       productImageUrl: products.imageUrl,
     })
-    .from(stockEvents)
-    .innerJoin(products, eq(stockEvents.productId, products.id))
-    .orderBy(desc(stockEvents.detectedAt))
+    .from(products)
+    .where(isNotNull(products.lastCheckedAt))
+    .orderBy(desc(products.createdAt))
     .limit(limit);
 }

@@ -29,6 +29,13 @@
       "when": 1768170000000,
       "tag": "0003_add_products_rrp",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1768171000000,
+      "tag": "0004_add_products_notified_at",
+      "breakpoints": true
     }
   ]
 }

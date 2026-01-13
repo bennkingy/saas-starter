@@ -2,12 +2,11 @@ import 'server-only';
 
 import { inArray, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
-import { products, stockEvents } from '@/lib/db/schema';
+import { products } from '@/lib/db/schema';
 import type { NewProduct, NewProductsSnapshot } from '@/lib/stock/fetcher';
 import { MAX_TRACKED_PRODUCTS } from '@/lib/config/products';
 
 export type NewArrivalDetected = {
-  stockEventId: number;
   productId: number;
   externalId: string;
   name: string;
@@ -85,42 +84,25 @@ export async function syncProductsAndDetectNewArrivals(snapshot: NewProductsSnap
       .from(products)
       .where(inArray(products.externalId, newProducts.map((p) => p.externalId)));
 
-    const productByExternalId = Object.fromEntries(
-      insertedProducts.map((p) => [p.externalId, p])
-    );
-
-    // Create stock events for new arrivals
-    const insertedEvents = await tx
-      .insert(stockEvents)
-      .values(
-        newProducts.map((product) => ({
-          productId: productByExternalId[product.externalId].id,
-          detectedAt: now,
-        }))
-      )
-      .returning();
-
-    // Build the new arrivals response
-    const newArrivals = insertedEvents.map((event) => {
-      const dbProduct = insertedProducts.find((p) => p.id === event.productId);
+    // Build the new arrivals response using products directly
+    const newArrivals = insertedProducts.map((dbProduct) => {
       const snapshotProduct = newProducts.find(
-        (p) => p.externalId === dbProduct?.externalId
+        (p) => p.externalId === dbProduct.externalId
       );
 
-      if (!dbProduct || !snapshotProduct) {
+      if (!snapshotProduct) {
         throw new Error(
-          `Internal error: no product found for productId=${event.productId}`
+          `Internal error: no snapshot product found for externalId=${dbProduct.externalId}`
         );
       }
 
       return {
-        stockEventId: event.id,
-        productId: event.productId,
+        productId: dbProduct.id,
         externalId: dbProduct.externalId,
         name: dbProduct.name,
         url: dbProduct.url,
         imageUrl: dbProduct.imageUrl ?? null,
-        detectedAt: event.detectedAt,
+        detectedAt: dbProduct.createdAt,
       };
     });
 
