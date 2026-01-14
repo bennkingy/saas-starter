@@ -59,7 +59,6 @@ export default function OpenGraphImage() {
               borderRadius: 999,
               border: '1px solid rgba(255,255,255,.18)',
               background: 'rgba(255,255,255,.06)',
-              width: 'fit-content',
               fontSize: 22
             }}
           >
