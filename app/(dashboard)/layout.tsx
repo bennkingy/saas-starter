@@ -80,13 +80,13 @@ function UserMenu() {
     <>
       <Link
         href="/dashboard/alerts"
-        className="text-sm font-medium text-gray-700 hover:text-gray-900"
+        className="text-sm font-medium text-gray-700 hover:text-gray-900 hidden md:inline-flex"
       >
         Alerts
       </Link>
       <Link
         href="/dashboard/preferences"
-        className="text-sm font-medium text-gray-700 hover:text-gray-900"
+        className="text-sm font-medium text-gray-700 hover:text-gray-900 hidden md:inline-flex"
       >
         Notifications
       </Link>

@@ -79,7 +79,7 @@ export default async function AlertsPage() {
   const groupedItems = groupItemsByDate(allItems);
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <section className="flex-1 p-4 lg:p-8 w-full min-w-0 overflow-x-hidden">
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
         Alerts
       </h1>
@@ -93,36 +93,36 @@ export default async function AlertsPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="w-full min-w-0 overflow-hidden">
           <CardHeader>
             <CardTitle>Newest Arrivals</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-8">
+          <CardContent className="w-full min-w-0 overflow-hidden">
+            <div className="space-y-8 w-full min-w-0">
               {groupedItems.map((group) => (
-                <div key={group.date.toISOString()}>
+                <div key={group.date.toISOString()} className="w-full min-w-0">
                   <h2 className="text-sm font-semibold text-gray-700 mb-4">
                     {formatDateGroup(group.date)}
                   </h2>
-                  <ul className="space-y-3">
+                  <ul className="space-y-3 w-full min-w-0">
                     {group.items.map((item) => (
                       <li
                         key={item.id}
-                        className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3 bg-white"
+                        className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3 bg-white w-full min-w-0"
                       >
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
                           {item.imageUrl && (
                             <img
                               src={item.imageUrl}
                               alt={formatProductDisplayName(item.name)}
-                              className="w-12 h-12 object-cover rounded"
+                              className="w-12 h-12 object-cover rounded flex-shrink-0"
                             />
                           )}
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1 overflow-hidden">
                             <p className="font-medium text-gray-900 truncate">
                               {formatProductDisplayName(item.name)}
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-gray-500 truncate">
                               {item.lastCheckedAt &&
                               item.lastCheckedAt.getTime() !==
                                 item.createdDate.getTime()
@@ -135,7 +135,7 @@ export default async function AlertsPage() {
                             </p>
                           </div>
                         </div>
-                        <a href={item.url} target="_blank" rel="noreferrer">
+                        <a href={item.url} target="_blank" rel="noreferrer" className="flex-shrink-0">
                           <Button variant="outline" size="sm">
                             View
                           </Button>
