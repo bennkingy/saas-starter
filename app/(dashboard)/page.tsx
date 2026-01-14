@@ -6,7 +6,7 @@ import { HeroParallaxImage } from "./_components/hero-parallax-image";
 import { LogoPatternBg } from "@/components/site/logo-pattern-bg";
 import { LatestAlerts } from "@/components/site/latest-alerts";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const recentArrivals = await getRecentNewArrivals(4);
@@ -60,7 +60,7 @@ export default async function HomePage() {
             <div className="max-w-2xl text-center lg:text-left">
               <h1 className="text-4xl font-bold text-gray-900 tracking-tight sm:text-5xl md:text-6xl">
                 Never miss a
-                <span className="block text-primary">Jellycat drop!</span>
+                <span className="block text-primary">Jellycat drop again!</span>
               </h1>
               <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
                 Get instantly alerted for new arrivals.

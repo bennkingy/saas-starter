@@ -90,7 +90,7 @@ export function SiteFooter() {
           <div>
             <SiteLogo variant="footer" />
             <div className="mt-1 text-sm font-medium text-slate-900/80">
-              Friendly alerts for new arrivals and restocks.
+              Never miss a Jellycat drop again!
             </div>
           </div>
 

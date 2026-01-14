@@ -35,3 +35,20 @@ export function isPasswordValid(validation: PasswordValidation): boolean {
     validation.hasSpecialChar
   );
 }
+
+/**
+ * Formats product names for display by replacing dashes with spaces.
+ * Also handles comma-separated names (takes first part) and normalizes whitespace.
+ * Example: "Amuseables-Arlette-Heart-Macaron-(Red)" -> "Amuseables Arlette Heart Macaron (Red)"
+ */
+export function formatProductName(rawName: string): string {
+  const cleanedName = rawName
+    .trim()
+    .split(",")
+    .at(0)
+    ?.replaceAll("-", " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return cleanedName ?? rawName;
+}

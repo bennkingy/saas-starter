@@ -1,22 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { getTeamForUser, getAllProductItems } from "@/lib/db/queries";
+import { formatProductName } from "@/lib/utils";
 
 function formatDateTime(value: Date | null) {
   if (!value) return "—";
   return value.toLocaleString();
-}
-
-function formatProductDisplayName(rawName: string) {
-  const cleanedName = rawName
-    .trim()
-    .split(",")
-    .at(0)
-    ?.replaceAll("-", " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  return cleanedName ?? rawName;
 }
 
 function formatRelativeTime(date: Date) {
@@ -108,19 +97,19 @@ export default async function AlertsPage() {
                     {group.items.map((item) => (
                       <li
                         key={item.id}
-                        className="flex items-center justify-between gap-3 border border-gray-200 rounded-lg p-3 bg-white w-full min-w-0"
+                        className="flex items-center justify-between gap-2 sm:gap-3 border border-gray-200 rounded-lg p-2 sm:p-3 bg-white w-full min-w-0 overflow-hidden"
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1 overflow-hidden">
+                        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 overflow-hidden">
                           {item.imageUrl && (
                             <img
                               src={item.imageUrl}
-                              alt={formatProductDisplayName(item.name)}
-                              className="w-12 h-12 object-cover rounded flex-shrink-0"
+                              alt={formatProductName(item.name)}
+                              className="w-10 h-10 sm:w-12 sm:h-12 object-cover rounded flex-shrink-0"
                             />
                           )}
                           <div className="min-w-0 flex-1 overflow-hidden">
-                            <p className="font-medium text-gray-900 truncate">
-                              {formatProductDisplayName(item.name)}
+                            <p className="font-medium text-gray-900 truncate text-sm sm:text-base">
+                              {formatProductName(item.name)}
                             </p>
                             <p className="text-xs text-gray-500 truncate">
                               {item.lastCheckedAt &&
@@ -139,9 +128,13 @@ export default async function AlertsPage() {
                           href={item.url}
                           target="_blank"
                           rel="noreferrer"
-                          className="flex-shrink-0"
+                          className="flex-shrink-1 ml-2"
                         >
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs sm:text-sm whitespace-nowrap"
+                          >
                             View
                           </Button>
                         </a>

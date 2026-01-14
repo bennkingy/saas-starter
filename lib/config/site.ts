@@ -1,7 +1,7 @@
 export const SITE_NAME = "Jelly Drop";
 
 export const SITE_DESCRIPTION =
-  "Fast email alerts (and optional SMS) when new Jellycats drop on the official Jellycat New page.";
+  "Get instantly alerted for new arrivals via emails and sms alerts when new Jellycats drop on the official Jellycat website.";
 
 export function getPublicSiteUrl() {
   const rawUrl = process.env.NEXT_PUBLIC_SITE_URL;

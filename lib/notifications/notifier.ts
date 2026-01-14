@@ -13,6 +13,7 @@ import type { NewArrivalDetected } from "@/lib/stock/differ";
 import { sendNewArrivalEmail } from "@/lib/notifications/email";
 import { createSmsProviderFromEnv } from "@/lib/notifications/sms";
 import { canUseSMS } from "@/lib/subscriptions/guards";
+import { formatProductName } from "@/lib/utils";
 
 type NotifyArgs = {
   newArrivals: NewArrivalDetected[];
@@ -200,7 +201,7 @@ export async function notifySubscribersOfNewArrivals({
         ? sendNewArrivalEmail({
             to: recipient.email,
             products: pendingArrivals.map((arrival) => ({
-              name: arrival.name,
+              name: formatProductName(arrival.name),
               url: arrival.url,
               imageUrl: arrival.imageUrl,
             })),
@@ -225,9 +226,9 @@ export async function notifySubscribersOfNewArrivals({
 
       const smsBody =
         pendingArrivals.length === 1
-          ? `🎉 New Jellycat: ${pendingArrivals[0].name} - ${pendingArrivals[0].url}`
+          ? `🎉 New Jellycat: ${formatProductName(pendingArrivals[0].name)} - ${pendingArrivals[0].url}`
           : `🎉 ${pendingArrivals.length} New Jellycats:\n${pendingArrivals
-              .map((a, i) => `${i + 1}. ${a.name} `)
+              .map((a, i) => `${i + 1}. ${formatProductName(a.name)} `)
               .join("\n")}`;
       // - ${a.url}
       const smsPromise = canSendSms

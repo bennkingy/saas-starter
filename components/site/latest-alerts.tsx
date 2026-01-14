@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { formatProductName } from "@/lib/utils";
 
 function formatRelativeTime(date: Date) {
   const now = new Date();
@@ -85,7 +86,7 @@ export function LatestAlerts({
                   {arrival.productImageUrl ? (
                     <img
                       src={arrival.productImageUrl}
-                      alt={arrival.productName}
+                      alt={formatProductName(arrival.productName)}
                       className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
                     />
                   ) : (
@@ -94,7 +95,7 @@ export function LatestAlerts({
                 </div>
                 <div className="relative z-10 mt-3">
                   <p className="font-medium text-gray-900 line-clamp-2">
-                    {arrival.productName}
+                    {formatProductName(arrival.productName)}
                   </p>
                   <p className="mt-1 text-xs text-gray-500">
                     Detected {formatRelativeTime(arrival.detectedAt)}

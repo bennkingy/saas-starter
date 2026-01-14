@@ -12,7 +12,7 @@ import {
 export const metadata: Metadata = {
   metadataBase: getPublicSiteUrl() ? new URL(getPublicSiteUrl()!) : undefined,
   title: {
-    default: SITE_NAME,
+    default: `${SITE_NAME} - Never miss a Jellycat drop again!`,
     template: `%s | ${SITE_NAME}`,
   },
   description: SITE_DESCRIPTION,
