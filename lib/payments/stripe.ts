@@ -168,7 +168,8 @@ export async function getStripePrices() {
   const prices = await stripe.prices.list({
     expand: ['data.product'],
     active: true,
-    type: 'recurring'
+    type: 'recurring',
+    limit: 100
   });
 
   return prices.data.map((price) => ({
@@ -185,7 +186,8 @@ export async function getStripePrices() {
 export async function getStripeProducts() {
   const products = await stripe.products.list({
     active: true,
-    expand: ['data.default_price']
+    expand: ['data.default_price'],
+    limit: 100
   });
 
   return products.data.map((product) => ({

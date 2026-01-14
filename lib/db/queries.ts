@@ -262,7 +262,7 @@ export async function getAdminStats() {
     .innerJoin(teams, eq(teamMembers.teamId, teams.id))
     .where(
       and(
-        eq(teams.planName, "Pro"),
+        eq(teams.planName, "Plus"),
         sql`${teams.subscriptionStatus} IN ('active', 'trialing')`
       )
     );
@@ -296,7 +296,7 @@ export async function getAdminStats() {
     .where(
       and(
         gte(teams.createdAt, thirtyDaysAgo),
-        eq(teams.planName, "Pro"),
+        eq(teams.planName, "Plus"),
         sql`${teams.subscriptionStatus} IN ('active', 'trialing')`
       )
     )

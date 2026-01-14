@@ -25,7 +25,7 @@ function isActiveSubscription(status: string | null | undefined) {
 }
 
 function isProPlan(planName: string | null | undefined) {
-  return (planName ?? "").toLowerCase() === "pro";
+  return (planName ?? "").toLowerCase() === "plus";
 }
 
 function hasActiveProSubscription(

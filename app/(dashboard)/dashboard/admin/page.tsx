@@ -85,7 +85,7 @@ export default function AdminPage() {
 
   const pieData = [
     { name: "Free Users", value: stats.freeUsers },
-    { name: "Pro Users", value: stats.proUsers },
+    { name: "Plus Users", value: stats.proUsers },
   ];
 
   // Fill in missing dates for charts
@@ -160,7 +160,7 @@ export default function AdminPage() {
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Pro Users</p>
+              <p className="text-sm font-medium text-gray-600">Plus Users</p>
               <p className="mt-2 text-3xl font-bold text-gray-900">
                 {stats.proUsers}
               </p>
@@ -263,10 +263,10 @@ export default function AdminPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* Pro Signups Chart */}
+        {/* Plus Signups Chart */}
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
-            Pro Signups (Last 30 Days)
+            Plus Signups (Last 30 Days)
           </h2>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={proSignupsChart}>
@@ -287,7 +287,7 @@ export default function AdminPage() {
                 }}
               />
               <Legend />
-              <Bar dataKey="count" fill="#8b5cf6" name="Pro Signups" />
+              <Bar dataKey="count" fill="#8b5cf6" name="Plus Signups" />
             </BarChart>
           </ResponsiveContainer>
         </div>

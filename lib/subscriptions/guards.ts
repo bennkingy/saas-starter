@@ -18,6 +18,6 @@ export function canReceiveNotifications(team: Pick<Team, 'subscriptionStatus'>) 
 
 export function canUseSMS(team: Pick<Team, 'subscriptionStatus' | 'planName'>) {
   if (!isSubscriptionActive(team)) return false;
-  return (team.planName ?? '').toLowerCase() === 'pro';
+  return (team.planName ?? '').toLowerCase() === 'plus';
 }
 

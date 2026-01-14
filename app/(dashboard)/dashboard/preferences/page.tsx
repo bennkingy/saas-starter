@@ -36,7 +36,7 @@ function isActiveSubscription(status: string | null | undefined) {
 }
 
 function isProPlan(planName: string | null | undefined) {
-  return (planName ?? "").toLowerCase() === "pro";
+  return (planName ?? "").toLowerCase() === "plus";
 }
 
 function PreferencesFormSkeleton() {
@@ -179,7 +179,7 @@ function PreferencesForm({ state }: { state: ActionState }) {
                         SMS alerts
                       </span>
                       <p className="text-xs text-gray-600">
-                        Requires an active Pro plan (£3/month).
+                        Requires an active Plus plan (£3/month).
                       </p>
                     </div>
                   </div>

@@ -32,7 +32,7 @@ export const updateNotificationPreferencesAction = validatedActionWithUser(
     });
 
     if (wantsSms && !smsAllowed) {
-      return { error: 'SMS alerts require the Pro plan.' };
+      return { error: 'SMS alerts require the Plus plan.' };
     }
 
     const phoneNumberTrimmed = (data.phoneNumber ?? '').trim();

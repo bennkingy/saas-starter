@@ -135,7 +135,12 @@ export default async function AlertsPage() {
                             </p>
                           </div>
                         </div>
-                        <a href={item.url} target="_blank" rel="noreferrer" className="flex-shrink-0">
+                        <a
+                          href={item.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex-shrink-0"
+                        >
                           <Button variant="outline" size="sm">
                             View
                           </Button>

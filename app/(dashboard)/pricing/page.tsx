@@ -16,9 +16,19 @@ export default async function PricingPage() {
     getStripeProducts(),
   ]);
 
-  const proPlan = products.find((product) => product.name === "Pro");
+  const proPlan = products.find((product) => 
+    product.name.trim().toLowerCase() === "plus"
+  );
 
   const proPrice = prices.find((price) => price.productId === proPlan?.id);
+
+  // Debug: Log what we found (only in development)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('Found products:', products.map(p => ({ name: p.name, id: p.id })));
+    console.log('Found prices:', prices.map(p => ({ productId: p.productId, id: p.id, amount: p.unitAmount })));
+    console.log('Pro plan found:', proPlan ? { name: proPlan.name, id: proPlan.id } : null);
+    console.log('Pro price found:', proPrice ? { id: proPrice.id, amount: proPrice.unitAmount } : null);
+  }
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -62,7 +72,7 @@ export default async function PricingPage() {
         </div>
 
         <PricingCard
-          name={proPlan?.name || "Pro"}
+          name={proPlan?.name || "Plus"}
           price={proPrice?.unitAmount ?? 300}
           currency={(proPrice?.currency ?? "gbp").toLowerCase()}
           interval={proPrice?.interval || "month"}
@@ -70,6 +80,10 @@ export default async function PricingPage() {
           features={["Everything in free, plus:", "SMS alerts"]}
           priceId={proPrice?.id}
           isConfigured={Boolean(proPlan?.id && proPrice?.id)}
+          hasProduct={Boolean(proPlan?.id)}
+          hasPrice={Boolean(proPrice?.id)}
+          allProducts={products.map(p => p.name)}
+          allPrices={prices.length}
         />
       </div>
 
@@ -92,6 +106,10 @@ function PricingCard({
   features,
   priceId,
   isConfigured,
+  hasProduct,
+  hasPrice,
+  allProducts,
+  allPrices,
 }: {
   name: string;
   price: number;
@@ -101,6 +119,10 @@ function PricingCard({
   features: string[];
   priceId?: string;
   isConfigured: boolean;
+  hasProduct: boolean;
+  hasPrice: boolean;
+  allProducts: string[];
+  allPrices: number;
 }) {
   const formattedPrice =
     price === 0
@@ -108,6 +130,19 @@ function PricingCard({
       : currency === "gbp"
       ? `£${price / 100}`
       : `${price / 100} ${currency.toUpperCase()}`;
+
+  const getErrorMessage = () => {
+    if (!hasProduct) {
+      const productsList = allProducts.length > 0 
+        ? ` Found products: ${allProducts.join(', ')}.` 
+        : ' No products found.';
+      return `Plus product not found in Stripe.${productsList} Make sure: 1) You have a product named 'Plus' (case-insensitive) that is active, 2) Your STRIPE_SECRET_KEY matches the mode (test/live) where the product was created, 3) The product is in the same Stripe account as your API key.`;
+    }
+    if (!hasPrice) {
+      return `Plus product found but no active recurring price configured. Found ${allPrices} recurring price(s) total. Please add a recurring price to your Plus product in Stripe.`;
+    }
+    return "Plus plan is not configured in Stripe yet.";
+  };
 
   return (
     <div className="relative pt-6 rounded-2xl border-2 border-primary/20 bg-gradient-to-br from-white to-primary/5 p-6 shadow-lg shadow-primary/10">
@@ -144,7 +179,7 @@ function PricingCard({
           </form>
         ) : (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-            Pro plan is not configured in Stripe yet.
+            {getErrorMessage()}
           </div>
         )}
       </div>
