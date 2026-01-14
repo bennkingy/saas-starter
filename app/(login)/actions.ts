@@ -20,7 +20,12 @@ import { comparePasswords, hashPassword, setSession } from "@/lib/auth/session";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import { createCheckoutSession } from "@/lib/payments/stripe";
-import { getUser, getUserWithTeam, getNotificationPreferencesForUser, updateNotificationPreferencesForUser } from "@/lib/db/queries";
+import {
+  getUser,
+  getUserWithTeam,
+  getNotificationPreferencesForUser,
+  updateNotificationPreferencesForUser,
+} from "@/lib/db/queries";
 import {
   validatedAction,
   validatedActionWithUser,
@@ -365,8 +370,8 @@ const phoneSchema = z
   .string()
   .trim()
   .refine(
-    (val) => val === '' || /^\+?[1-9]\d{7,14}$/.test(val),
-    'Enter a valid phone number (E.164 format).'
+    (val) => val === "" || /^\+?[1-9]\d{7,14}$/.test(val),
+    "Enter a valid phone number (E.164 format)."
   )
   .optional();
 
@@ -382,13 +387,15 @@ export const updateAccount = validatedActionWithUser(
     const { name, email, phoneNumber } = data;
     const userWithTeam = await getUserWithTeam(user.id);
 
-    const phoneNumberTrimmed = (phoneNumber ?? '').trim();
-    
+    const phoneNumberTrimmed = (phoneNumber ?? "").trim();
+
     if (phoneNumberTrimmed) {
       const phoneNumberValidated = phoneSchema.safeParse(phoneNumberTrimmed);
       if (!phoneNumberValidated.success) {
         return {
-          error: phoneNumberValidated.error?.errors[0]?.message ?? 'Invalid phone number.',
+          error:
+            phoneNumberValidated.error?.errors[0]?.message ??
+            "Invalid phone number.",
           name,
           email,
         };
