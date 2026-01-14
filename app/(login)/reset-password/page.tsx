@@ -1,31 +1,31 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { Suspense, useActionState, useEffect, useState, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { resetPassword } from '../actions';
-import { ActionState } from '@/lib/auth/middleware';
-import { SiteLogo } from '@/components/site/site-logo';
-import { validatePassword, isPasswordValid } from '@/lib/utils';
-import { PasswordRequirements } from '@/components/ui/password-requirements';
+import Link from "next/link";
+import { Suspense, useActionState, useEffect, useState, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2 } from "lucide-react";
+import { resetPassword } from "../actions";
+import { ActionState } from "@/lib/auth/middleware";
+import { SiteLogo } from "@/components/site/site-logo";
+import { validatePassword, isPasswordValid } from "@/lib/utils";
+import { PasswordRequirements } from "@/components/ui/password-requirements";
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const token = searchParams.get('token');
+  const token = searchParams.get("token");
   const [state, formAction, pending] = useActionState<ActionState, FormData>(
     resetPassword,
-    { error: '' }
+    { error: "" }
   );
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showRequirements, setShowRequirements] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  
+
   const passwordValidation = validatePassword(password);
   const passwordsMatch = password === confirmPassword;
   const isFormValid = isPasswordValid(passwordValidation) && passwordsMatch;
@@ -33,7 +33,7 @@ function ResetPasswordForm() {
   useEffect(() => {
     if (state?.success) {
       const timer = setTimeout(() => {
-        router.push('/sign-in');
+        router.push("/sign-in");
       }, 2000);
       return () => clearTimeout(timer);
     }
@@ -92,7 +92,7 @@ function ResetPasswordForm() {
           }}
         >
           <input type="hidden" name="token" value={token} />
-          
+
           <div>
             <Label
               htmlFor="password"
@@ -150,8 +150,8 @@ function ResetPasswordForm() {
                 maxLength={100}
                 className={`appearance-none rounded-full relative block w-full px-3 py-2 border ${
                   confirmPassword && !passwordsMatch
-                    ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:ring-primary focus:border-primary'
+                    ? "border-red-300 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:ring-primary focus:border-primary"
                 } placeholder-gray-500 text-gray-900 focus:outline-none focus:z-10 sm:text-sm`}
                 placeholder="Confirm your new password"
               />
@@ -162,9 +162,7 @@ function ResetPasswordForm() {
               </p>
             )}
             {confirmPassword && passwordsMatch && (
-              <p className="mt-1 text-sm text-green-600">
-                Passwords match
-              </p>
+              <p className="mt-1 text-sm text-green-600">Passwords match</p>
             )}
           </div>
 
@@ -188,7 +186,7 @@ function ResetPasswordForm() {
                   Resetting...
                 </>
               ) : (
-                'Reset password'
+                "Reset password"
               )}
             </Button>
           </div>
@@ -211,18 +209,20 @@ function ResetPasswordForm() {
 
 export default function ResetPasswordPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <div className="flex justify-center">
-            <SiteLogo variant="header" href="/" showText={false} />
-          </div>
-          <div className="mt-6 text-center">
-            <Loader2 className="animate-spin mx-auto h-8 w-8 text-gray-400" />
+    <Suspense
+      fallback={
+        <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
+          <div className="sm:mx-auto sm:w-full sm:max-w-md">
+            <div className="flex justify-center">
+              <SiteLogo variant="header" href="/" showText={false} />
+            </div>
+            <div className="mt-6 text-center">
+              <Loader2 className="animate-spin mx-auto h-8 w-8 text-gray-400" />
+            </div>
           </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <ResetPasswordForm />
     </Suspense>
   );
