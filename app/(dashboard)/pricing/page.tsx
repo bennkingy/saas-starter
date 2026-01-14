@@ -6,7 +6,7 @@ import Link from "next/link";
 import { getRecentNewArrivals, getUser } from "@/lib/db/queries";
 import { LatestAlerts } from "@/components/site/latest-alerts";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
   const user = await getUser();
@@ -16,18 +16,34 @@ export default async function PricingPage() {
     getStripeProducts(),
   ]);
 
-  const proPlan = products.find((product) => 
-    product.name.trim().toLowerCase() === "plus"
+  const proPlan = products.find(
+    (product) => product.name.trim().toLowerCase() === "plus"
   );
 
   const proPrice = prices.find((price) => price.productId === proPlan?.id);
 
   // Debug: Log what we found (only in development)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('Found products:', products.map(p => ({ name: p.name, id: p.id })));
-    console.log('Found prices:', prices.map(p => ({ productId: p.productId, id: p.id, amount: p.unitAmount })));
-    console.log('Pro plan found:', proPlan ? { name: proPlan.name, id: proPlan.id } : null);
-    console.log('Pro price found:', proPrice ? { id: proPrice.id, amount: proPrice.unitAmount } : null);
+  if (process.env.NODE_ENV === "development") {
+    console.log(
+      "Found products:",
+      products.map((p) => ({ name: p.name, id: p.id }))
+    );
+    console.log(
+      "Found prices:",
+      prices.map((p) => ({
+        productId: p.productId,
+        id: p.id,
+        amount: p.unitAmount,
+      }))
+    );
+    console.log(
+      "Pro plan found:",
+      proPlan ? { name: proPlan.name, id: proPlan.id } : null
+    );
+    console.log(
+      "Pro price found:",
+      proPrice ? { id: proPrice.id, amount: proPrice.unitAmount } : null
+    );
   }
 
   return (
@@ -82,7 +98,7 @@ export default async function PricingPage() {
           isConfigured={Boolean(proPlan?.id && proPrice?.id)}
           hasProduct={Boolean(proPlan?.id)}
           hasPrice={Boolean(proPrice?.id)}
-          allProducts={products.map(p => p.name)}
+          allProducts={products.map((p) => p.name)}
           allPrices={prices.length}
         />
       </div>
@@ -133,9 +149,10 @@ function PricingCard({
 
   const getErrorMessage = () => {
     if (!hasProduct) {
-      const productsList = allProducts.length > 0 
-        ? ` Found products: ${allProducts.join(', ')}.` 
-        : ' No products found.';
+      const productsList =
+        allProducts.length > 0
+          ? ` Found products: ${allProducts.join(", ")}.`
+          : " No products found.";
       return `Plus product not found in Stripe.${productsList} Make sure: 1) You have a product named 'Plus' (case-insensitive) that is active, 2) Your STRIPE_SECRET_KEY matches the mode (test/live) where the product was created, 3) The product is in the same Stripe account as your API key.`;
     }
     if (!hasPrice) {
