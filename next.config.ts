@@ -1,4 +1,4 @@
-import type { NextConfig } from 'next';
+import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   typescript: {
@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     ppr: true,
-    clientSegmentCache: true
-  }
+    clientSegmentCache: true,
+  },
 };
 
 export default nextConfig;
