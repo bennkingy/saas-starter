@@ -28,13 +28,19 @@ async function runNewArrivalsCheck(request: Request) {
   const isDryRun = url.searchParams.get("dryRun") === "1";
 
   // Verify request is from Vercel Cron (production) or has valid secret (local/dev)
-  const isVercelCron = request.headers.get("x-vercel-cron") === "1";
   const cronSecret = process.env.CRON_SECRET;
+  
+  // Vercel Cron sends authorization header with bearer token matching CRON_SECRET
+  const authHeader = request.headers.get("authorization");
+  const isVercelCron = authHeader?.startsWith("Bearer ") && 
+    authHeader.slice(7) === cronSecret;
+  
+  // Fallback for local/dev: check custom header
   const providedSecret = request.headers.get(
     NOTIFICATIONS_CONFIG.cron.headerName
   );
 
-  // In production on Vercel, require the x-vercel-cron header
+  // In production on Vercel, require the authorization bearer token
   // In local/dev, allow secret-based auth as fallback
   const isAuthorized =
     isVercelCron || (cronSecret && providedSecret === cronSecret);

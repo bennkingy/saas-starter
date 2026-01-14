@@ -26,7 +26,7 @@ async function createStripeProducts() {
 
 async function seed() {
   const email = "bennkingy@gmail.com";
-  const password = "jellycatsalerts123";
+  const password = "Lollipop!1";
   const passwordHash = await hashPassword(password);
 
   const [user] = await db
@@ -35,7 +35,7 @@ async function seed() {
       {
         email: email,
         passwordHash: passwordHash,
-        role: "owner",
+        role: "admin",
       },
     ])
     .returning();
