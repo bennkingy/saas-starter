@@ -27,18 +27,19 @@ async function runNewArrivalsCheck(request: Request) {
   const url = new URL(request.url);
   const isDryRun = url.searchParams.get("dryRun") === "1";
 
+  // Verify request is from Vercel Cron (production) or has valid secret (local/dev)
+  const isVercelCron = request.headers.get("x-vercel-cron") === "1";
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret) {
-    return NextResponse.json(
-      { error: "Server misconfigured: CRON_SECRET is not set." },
-      { status: 500 }
-    );
-  }
-
   const providedSecret = request.headers.get(
     NOTIFICATIONS_CONFIG.cron.headerName
   );
-  if (providedSecret !== cronSecret) {
+
+  // In production on Vercel, require the x-vercel-cron header
+  // In local/dev, allow secret-based auth as fallback
+  const isAuthorized =
+    isVercelCron || (cronSecret && providedSecret === cronSecret);
+
+  if (!isAuthorized) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

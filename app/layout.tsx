@@ -55,11 +55,22 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ['latin'] });
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
+  let userFallback = null;
+  let teamFallback = null;
+
+  try {
+    userFallback = await getUser();
+    teamFallback = await getTeamForUser();
+  } catch (error) {
+    // During build time or if database is unavailable, these will be null
+    // Components will fetch from API routes at runtime
+  }
+
   return (
     <html
       lang="en"
@@ -69,10 +80,8 @@ export default function RootLayout({
         <SWRConfig
           value={{
             fallback: {
-              // We do NOT await here
-              // Only components that read this data will suspend
-              '/api/user': getUser(),
-              '/api/team': getTeamForUser()
+              '/api/user': userFallback,
+              '/api/team': teamFallback
             }
           }}
         >

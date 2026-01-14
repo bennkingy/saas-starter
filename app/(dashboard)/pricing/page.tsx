@@ -6,8 +6,7 @@ import Link from "next/link";
 import { getRecentNewArrivals, getUser } from "@/lib/db/queries";
 import { LatestAlerts } from "@/components/site/latest-alerts";
 
-// Prices are fresh for one hour max
-export const revalidate = 3600;
+export const dynamic = 'force-dynamic';
 
 export default async function PricingPage() {
   const user = await getUser();

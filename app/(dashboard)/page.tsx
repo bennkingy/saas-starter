@@ -6,6 +6,8 @@ import { HeroParallaxImage } from "./_components/hero-parallax-image";
 import { LogoPatternBg } from "@/components/site/logo-pattern-bg";
 import { LatestAlerts } from "@/components/site/latest-alerts";
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const recentArrivals = await getRecentNewArrivals(4);
 
