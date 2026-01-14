@@ -36,6 +36,13 @@
       "when": 1768171000000,
       "tag": "0004_add_products_notified_at",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1768172000000,
+      "tag": "0005_add_password_reset_columns",
+      "breakpoints": true
     }
   ]
 }

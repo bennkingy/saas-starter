@@ -74,6 +74,22 @@ You can listen for Stripe webhooks locally through their CLI to handle subscript
 stripe listen --forward-to localhost:3000/api/stripe/webhook
 ```
 
+## Setting up QuickSMS
+
+SMS notifications are available for Pro plan subscribers. To enable SMS functionality:
+
+1. **Get your QuickSMS access token:**
+   - Sign up for a [QuickSMS account](https://www.quicksms.com/)
+   - Get your access token from the QuickSMS dashboard
+   - Add it to your `.env` file:
+     ```
+     QUICKSMS_ACCESS_TOKEN=your_access_token
+     ```
+
+2. **Test SMS functionality:**
+   - Use the test endpoint: `GET /api/test/sms?phone=+15551234567`
+   - Or send a POST request with `{ "phone": "+15551234567" }`
+
 ## Testing Payments
 
 To test Stripe payments, use the following test card details:
@@ -91,7 +107,6 @@ When you're ready to deploy your SaaS application to production, follow these st
 - [ ] Replace placeholder URLs in `lib/config/products.ts` with real Jellycat product links
 - [ ] Set required env vars: `CRON_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
 - [ ] Configure an external cron to call `GET /api/cron/stock-check` once per minute with header `x-cron-secret: <CRON_SECRET>`
-- [ ] Implement SMS provider (Twilio) in `lib/notifications/sms.ts` and set `TWILIO_*` env vars before enabling SMS in production
 
 ### Set up a production Stripe webhook
 
@@ -114,6 +129,7 @@ In your Vercel project settings (or during deployment), add all the necessary en
 3. `STRIPE_WEBHOOK_SECRET`: Use the webhook secret from the production webhook you created in step 1.
 4. `POSTGRES_URL`: Set this to your production database URL.
 5. `AUTH_SECRET`: Set this to a random string. `openssl rand -base64 32` will generate one.
+6. `QUICKSMS_ACCESS_TOKEN`: Your QuickSMS access token (for SMS notifications).
 
 ## Other Templates
 

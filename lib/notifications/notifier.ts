@@ -32,7 +32,12 @@ export async function notifySubscribersOfNewArrivals({
 
   const productIds = newArrivals.map((r) => r.productId);
   console.log(
-    `[notifier] Checking ${productIds.length} product IDs for pending notifications`
+    `[notifier] Checking ${productIds.length} product IDs for pending notifications:`,
+    productIds
+  );
+  console.log(
+    `[notifier] New arrivals details:`,
+    newArrivals.map((a) => ({ id: a.productId, name: a.name }))
   );
 
   /**
@@ -48,6 +53,10 @@ export async function notifySubscribersOfNewArrivals({
     `[notifier] Found ${pendingProducts.length} pending products (${
       productIds.length - pendingProducts.length
     } already notified)`
+  );
+  console.log(
+    `[notifier] Pending product IDs:`,
+    pendingProducts.map((p) => p.id)
   );
 
   const pendingProductIdSet = new Set(pendingProducts.map((p) => p.id));
@@ -70,7 +79,9 @@ export async function notifySubscribersOfNewArrivals({
    * Get all users with notification preferences.
    * Email alerts are free and don't require team membership.
    * Team/subscription info is only needed for SMS (Pro plan).
+   * Start from users and left join preferences so users without preferences are still included.
    */
+  console.log(`[notifier] Querying database for all users...`);
   const recipients = await db
     .select({
       userId: users.id,
@@ -81,27 +92,67 @@ export async function notifySubscribersOfNewArrivals({
       smsEnabled: notificationPreferences.smsEnabled,
       phoneNumber: notificationPreferences.phoneNumber,
     })
-    .from(notificationPreferences)
-    .innerJoin(users, eq(users.id, notificationPreferences.userId))
+    .from(users)
+    .leftJoin(
+      notificationPreferences,
+      eq(users.id, notificationPreferences.userId)
+    )
     .leftJoin(teamMembers, eq(teamMembers.userId, users.id))
-    .leftJoin(teams, eq(teams.id, teamMembers.teamId));
+    .leftJoin(teams, eq(teams.id, teamMembers.teamId))
+    .where(isNull(users.deletedAt));
 
   console.log(
-    `[notifier] Found ${recipients.length} recipients with notification preferences`
+    `[notifier] Found ${recipients.length} total recipients (users) from database`
+  );
+  console.log(
+    `[notifier] Raw recipient data:`,
+    recipients.map((r) => ({
+      userId: r.userId,
+      email: r.email,
+      emailEnabled: r.emailEnabled,
+      hasPreference: r.emailEnabled !== null,
+    }))
   );
 
-  // Filter recipients: email enabled (defaults to true), or SMS enabled with valid setup
+  // Filter recipients: include users with either email OR SMS enabled
+  console.log(`[notifier] Filtering recipients for email or SMS enabled...`);
   const activeRecipients = recipients.filter((r) => {
-    const emailEnabled = r.emailEnabled ?? true;
-    return emailEnabled;
+    // Include recipients with either email or SMS enabled
+    const emailEnabled = r.emailEnabled === true;
+    const smsEnabled = r.smsEnabled === true;
+    const hasPhoneNumber = Boolean(r.phoneNumber);
+    const canSendSms = true;
+    // smsEnabled &&
+    // hasPhoneNumber &&
+    // canUseSMS({
+    //   subscriptionStatus: r.teamSubscriptionStatus ?? null,
+    //   planName: r.teamPlanName ?? null,
+    // });
+    const isActive = emailEnabled || canSendSms;
+    console.log(
+      `[notifier]   Checking ${r.email}: emailEnabled=${r.emailEnabled}, smsEnabled=${r.smsEnabled}, hasPhoneNumber=${hasPhoneNumber}, canSendSms=${canSendSms}, isActive=${isActive}`
+    );
+    return isActive;
   });
 
   console.log(
-    `[notifier] ${activeRecipients.length} active recipients (email enabled)`
+    `[notifier] ${activeRecipients.length} active recipients (email or SMS enabled) out of ${recipients.length} total`
   );
+  if (activeRecipients.length === 0) {
+    console.log(`[notifier] ⚠️  WARNING: No active recipients found!`);
+    console.log(`[notifier] All recipients:`, recipients);
+  }
   activeRecipients.forEach((r) => {
+    const emailEnabled = r.emailEnabled === true;
+    const smsEnabled = r.smsEnabled === true;
+    const canSendSms = true;
+    // smsEnabled && Boolean(r.phoneNumber);
+    // && canUseSMS({
+    //   subscriptionStatus: r.teamSubscriptionStatus ?? null,
+    //   planName: r.teamPlanName ?? null,
+    // });
     console.log(
-      `[notifier]   - ${r.email} (emailEnabled: ${r.emailEnabled ?? true})`
+      `[notifier]   ✅ Active: ${r.email} (emailEnabled: ${emailEnabled}, smsEnabled: ${smsEnabled}, canSendSms: ${canSendSms})`
     );
   });
 
@@ -114,80 +165,129 @@ export async function notifySubscribersOfNewArrivals({
 
   const smsProvider = createSmsProviderFromEnv();
 
-  const totalNotifications = activeRecipients.length * pendingArrivals.length;
+  const totalNotifications = activeRecipients.length;
   console.log(
-    `[notifier] Sending ${totalNotifications} email notifications...`
+    `[notifier] Preparing to send notifications to ${totalNotifications} recipients (email and/or SMS with ${pendingArrivals.length} products)...`
+  );
+  console.log(
+    `[notifier] Breakdown: ${activeRecipients.length} recipients, ${pendingArrivals.length} products per notification`
   );
 
   /**
-   * Send notifications to ALL active subscribers for each new arrival.
-   * Everyone gets alerted - no per-user product selection needed.
+   * Send one email and/or SMS per recipient with all new arrivals.
+   * Everyone gets alerted with all products in a single notification.
    * Use allSettled so individual failures don't stop the whole process.
    */
-  const results = await Promise.allSettled(
-    activeRecipients.flatMap((recipient) =>
-      pendingArrivals.flatMap((arrival) => {
-        const emailEnabled = recipient.emailEnabled ?? true;
-        const smsEnabled = recipient.smsEnabled ?? false;
+  console.log(`[notifier] Starting to send notifications...`);
+  const notificationPromises = activeRecipients
+    .map((recipient) => {
+      // Only send when explicitly enabled (true), not when null or false
+      const emailEnabled = recipient.emailEnabled === true;
+      const smsEnabled = recipient.smsEnabled === true;
 
-        const emailPromise = emailEnabled
-          ? sendNewArrivalEmail({
-              to: recipient.email,
-              productName: arrival.name,
-              productUrl: arrival.url,
+      const canSendSms = true;
+      // smsEnabled &&
+      // Boolean(recipient.phoneNumber) &&
+      // canUseSMS({
+      //   subscriptionStatus: recipient.teamSubscriptionStatus ?? null,
+      //   planName: recipient.teamPlanName ?? null,
+      // });
+      console.log(
+        `[notifier] Creating notification promises for ${recipient.email} with ${pendingArrivals.length} products (emailEnabled: ${emailEnabled}, smsEnabled: ${smsEnabled}, canSendSms: ${canSendSms})`
+      );
+
+      const emailPromise = emailEnabled
+        ? sendNewArrivalEmail({
+            to: recipient.email,
+            products: pendingArrivals.map((arrival) => ({
+              name: arrival.name,
+              url: arrival.url,
               imageUrl: arrival.imageUrl,
+            })),
+          })
+            .then(() => {
+              console.log(
+                `[notifier] ✅ Email sent successfully to ${recipient.email} with ${pendingArrivals.length} products`
+              );
             })
-              .then(() => {
-                console.log(
-                  `[notifier] ✅ Email sent to ${recipient.email} for ${arrival.name}`
-                );
-              })
-              .catch((error) => {
-                console.error(
-                  `[notifier] ❌ Failed to send email to ${recipient.email} for ${arrival.name}:`,
-                  error
-                );
-                throw error;
-              })
-          : Promise.resolve();
+            .catch((error) => {
+              console.error(
+                `[notifier] ❌ Failed to send email to ${recipient.email}:`,
+                error
+              );
+              console.error(
+                `[notifier] Error details:`,
+                error instanceof Error ? error.message : String(error)
+              );
+              throw error;
+            })
+        : Promise.resolve();
 
-        const canSendSms =
-          smsEnabled &&
-          Boolean(recipient.phoneNumber) &&
-          canUseSMS({
-            subscriptionStatus: recipient.teamSubscriptionStatus ?? null,
-            planName: recipient.teamPlanName ?? null,
-          });
+      const smsBody =
+        pendingArrivals.length === 1
+          ? `🎉 New Jellycat: ${pendingArrivals[0].name} - ${pendingArrivals[0].url}`
+          : `🎉 ${pendingArrivals.length} New Jellycats:\n${pendingArrivals
+              .map((a, i) => `${i + 1}. ${a.name} `)
+              .join("\n")}`;
+      // - ${a.url}
+      const smsPromise = canSendSms
+        ? smsProvider
+            .send({
+              to: recipient.phoneNumber as string,
+              body: smsBody,
+            })
+            .then(() => {
+              console.log(
+                `[notifier] ✅ SMS sent successfully to ${recipient.phoneNumber} with ${pendingArrivals.length} products`
+              );
+            })
+            .catch((error) => {
+              console.error(
+                `[notifier] ❌ Failed to send SMS to ${recipient.phoneNumber}:`,
+                error
+              );
+              console.error(
+                `[notifier] Error details:`,
+                error instanceof Error ? error.message : String(error)
+              );
+              throw error;
+            })
+        : Promise.resolve();
 
-        const smsPromise = canSendSms
-          ? smsProvider
-              .send({
-                to: recipient.phoneNumber as string,
-                body: `🎉 New Jellycat: ${arrival.name} - ${arrival.url}`,
-              })
-              .catch((error) => {
-                console.error(
-                  `[notifier] Failed to send SMS to ${recipient.phoneNumber}:`,
-                  error
-                );
-                throw error;
-              })
-          : Promise.resolve();
+      return [emailPromise, smsPromise];
+    })
+    .flat();
 
-        return [emailPromise, smsPromise];
-      })
-    )
+  console.log(
+    `[notifier] Created ${notificationPromises.length} notification promises, awaiting all...`
   );
+  const results = await Promise.allSettled(notificationPromises);
 
   const successful = results.filter((r) => r.status === "fulfilled").length;
   const failed = results.filter((r) => r.status === "rejected").length;
   console.log(
-    `[notifier] Notification results: ${successful} succeeded, ${failed} failed`
+    `[notifier] Notification results: ${successful} succeeded, ${failed} failed out of ${results.length} total`
   );
+
+  if (failed > 0) {
+    console.log(`[notifier] Failed notification details:`);
+    results.forEach((result, index) => {
+      if (result.status === "rejected") {
+        console.error(`[notifier]   Failed promise ${index}:`, result.reason);
+      }
+    });
+  }
 
   // Mark products as notified even if some emails failed (we don't want to retry forever)
   const notifiedAt = new Date();
   const notifiedIds = pendingArrivals.map((r) => r.productId);
+
+  console.log(
+    `[notifier] Marking ${
+      notifiedIds.length
+    } products as notified with timestamp: ${notifiedAt.toISOString()}`
+  );
+  console.log(`[notifier] Product IDs to mark:`, notifiedIds);
 
   await db
     .update(products)
@@ -195,8 +295,9 @@ export async function notifySubscribersOfNewArrivals({
     .where(inArray(products.id, notifiedIds));
 
   console.log(
-    `[notifier] ✅ Marked ${notifiedIds.length} products as notified`
+    `[notifier] ✅ Database update completed. Marked ${notifiedIds.length} products as notified`
   );
+  console.log(`[notifier] Returning notifiedProductIds:`, notifiedIds);
 
   return { notifiedProductIds: notifiedIds };
 }

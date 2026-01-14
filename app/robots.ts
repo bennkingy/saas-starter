@@ -1,5 +1,5 @@
-import type { MetadataRoute } from 'next';
-import { requirePublicSiteUrl } from '@/lib/config/site';
+import type { MetadataRoute } from "next";
+import { requirePublicSiteUrl } from "@/lib/config/site";
 
 export default function robots(): MetadataRoute.Robots {
   const siteUrl = requirePublicSiteUrl();
@@ -7,19 +7,19 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
-        userAgent: '*',
-        allow: '/',
+        userAgent: "*",
+        allow: "/",
         disallow: [
-          '/api',
-          '/dashboard',
-          '/sign-in',
-          '/sign-up',
-          '/cancel',
-          '/success',
-          '/terminal'
-        ]
-      }
+          "/api",
+          "/dashboard",
+          "/sign-in",
+          "/sign-up",
+          "/cancel",
+          "/success",
+          "/terminal",
+        ],
+      },
     ],
-    sitemap: `${siteUrl}/sitemap.xml`
+    sitemap: `${siteUrl}/sitemap.xml`,
   };
 }

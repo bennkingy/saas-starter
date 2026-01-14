@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
-import { NOTIFICATIONS_CONFIG } from '@/lib/config/notifications';
-import { fetchNewProductsSnapshot } from '@/lib/stock/fetcher';
-import { syncProductsAndDetectNewArrivals } from '@/lib/stock/differ';
-import { notifySubscribersOfNewArrivals } from '@/lib/notifications/notifier';
-import { client } from '@/lib/db/drizzle';
+import { NextResponse } from "next/server";
+import { NOTIFICATIONS_CONFIG } from "@/lib/config/notifications";
+import { fetchNewProductsSnapshot } from "@/lib/stock/fetcher";
+import { syncProductsAndDetectNewArrivals } from "@/lib/stock/differ";
+import { notifySubscribersOfNewArrivals } from "@/lib/notifications/notifier";
+import { client } from "@/lib/db/drizzle";
 
-export const runtime = 'nodejs';
+export const runtime = "nodejs";
 
-const CRON_LOCK_KEY = 'jellycatsalerts:cron:stock-check';
+const CRON_LOCK_KEY = "jellycatsalerts:cron:stock-check";
 
 async function tryAcquireCronLock() {
   const rows = await client<
@@ -25,90 +25,120 @@ async function releaseCronLock() {
 
 async function runNewArrivalsCheck(request: Request) {
   const url = new URL(request.url);
-  const isDryRun = url.searchParams.get('dryRun') === '1';
+  const isDryRun = url.searchParams.get("dryRun") === "1";
 
   const cronSecret = process.env.CRON_SECRET;
   if (!cronSecret) {
     return NextResponse.json(
-      { error: 'Server misconfigured: CRON_SECRET is not set.' },
+      { error: "Server misconfigured: CRON_SECRET is not set." },
       { status: 500 }
     );
   }
 
-  const providedSecret = request.headers.get(NOTIFICATIONS_CONFIG.cron.headerName);
+  const providedSecret = request.headers.get(
+    NOTIFICATIONS_CONFIG.cron.headerName
+  );
   if (providedSecret !== cronSecret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const lockAcquired = await tryAcquireCronLock();
   if (!lockAcquired) {
     return NextResponse.json(
-      { skipped: true, reason: 'lock-not-acquired' },
+      { skipped: true, reason: "lock-not-acquired" },
       { status: 409 }
     );
   }
 
   try {
-  /**
-   * Expected schedule: once per minute (or as desired).
-   *
-   * Flow:
-   * - Fetch the /new page from Jellycat
-   * - Compare against previously seen products
-   * - If new products appear, create stock events and notify all subscribers
-   */
-  console.log('[cron] Fetching new products snapshot...');
-  const snapshot = await fetchNewProductsSnapshot();
+    /**
+     * Expected schedule: once per minute (or as desired).
+     *
+     * Flow:
+     * - Fetch the /new page from Jellycat
+     * - Compare against previously seen products
+     * - If new products appear, add the product to the database and notify all subscribers
+     */
+    console.log("[cron] Fetching new products snapshot...");
+    const snapshot = await fetchNewProductsSnapshot();
 
-  if (snapshot.notModified) {
-    console.log('[cron] Snapshot not modified (304)');
-    return NextResponse.json({
-      notModified: true,
-      productsFound: 0,
-      newArrivalsDetected: 0,
-      productsNotified: 0,
-    });
-  }
+    if (snapshot.notModified) {
+      console.log("[cron] Snapshot not modified (304)");
+      return NextResponse.json({
+        notModified: true,
+        productsFound: 0,
+        newArrivalsDetected: 0,
+        productsNotified: 0,
+      });
+    }
 
-  console.log(`[cron] Found ${snapshot.products.length} products in snapshot`);
-  const { newArrivals } = await syncProductsAndDetectNewArrivals(snapshot);
-  console.log(`[cron] Detected ${newArrivals.length} new arrivals`);
-  
-  if (isDryRun) {
-    console.log('[cron] Dry run mode - skipping notifications');
-    return NextResponse.json({
-      dryRun: true,
-      productsFound: snapshot.products.length,
-      products: snapshot.products,
-      newArrivalsDetected: newArrivals.length,
-      newArrivals,
-      productsNotified: 0,
-    });
-  }
+    console.log(
+      `[cron] Found ${snapshot.products.length} products in snapshot`
+    );
+    const { newArrivals } = await syncProductsAndDetectNewArrivals(snapshot);
+    console.log(`[cron] Detected ${newArrivals.length} new arrivals`);
+    if (newArrivals.length > 0) {
+      console.log(
+        `[cron] New arrivals details:`,
+        newArrivals.map((a) => ({ id: a.productId, name: a.name }))
+      );
+    }
 
-  console.log(`[cron] Calling notifier with ${newArrivals.length} new arrivals`);
-  try {
-    const { notifiedProductIds } = await notifySubscribersOfNewArrivals({ newArrivals });
-    console.log(`[cron] Notifier returned ${notifiedProductIds.length} notified product IDs`);
+    if (isDryRun) {
+      console.log("[cron] Dry run mode - skipping notifications");
+      return NextResponse.json({
+        dryRun: true,
+        productsFound: snapshot.products.length,
+        products: snapshot.products,
+        newArrivalsDetected: newArrivals.length,
+        newArrivals,
+        productsNotified: 0,
+      });
+    }
 
-    return NextResponse.json({
-      productsFound: snapshot.products.length,
-      newArrivalsDetected: newArrivals.length,
-      productsNotified: notifiedProductIds.length,
-    });
-  } catch (error) {
-    console.error('[cron] Error in notifier:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to send notifications',
-        details: error instanceof Error ? error.message : String(error),
+    if (newArrivals.length === 0) {
+      console.log("[cron] No new arrivals to notify");
+      return NextResponse.json({
+        productsFound: snapshot.products.length,
+        newArrivalsDetected: 0,
+        productsNotified: 0,
+      });
+    }
+
+    console.log(
+      `[cron] Calling notifier with ${newArrivals.length} new arrivals`
+    );
+    try {
+      const { notifiedProductIds } = await notifySubscribersOfNewArrivals({
+        newArrivals,
+      });
+      console.log(
+        `[cron] Notifier returned ${notifiedProductIds.length} notified product IDs`
+      );
+      console.log(`[cron] Notified product IDs:`, notifiedProductIds);
+
+      return NextResponse.json({
         productsFound: snapshot.products.length,
         newArrivalsDetected: newArrivals.length,
-        productsNotified: 0,
-      },
-      { status: 500 }
-    );
-  }
+        productsNotified: notifiedProductIds.length,
+      });
+    } catch (error) {
+      console.error("[cron] ❌ Error in notifier:", error);
+      console.error(
+        "[cron] Error stack:",
+        error instanceof Error ? error.stack : "No stack trace"
+      );
+      return NextResponse.json(
+        {
+          error: "Failed to send notifications",
+          details: error instanceof Error ? error.message : String(error),
+          productsFound: snapshot.products.length,
+          newArrivalsDetected: newArrivals.length,
+          productsNotified: 0,
+        },
+        { status: 500 }
+      );
+    }
   } finally {
     await releaseCronLock();
   }

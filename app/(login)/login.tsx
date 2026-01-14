@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useActionState } from 'react';
+import { useActionState, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,8 @@ import { Loader2 } from 'lucide-react';
 import { signIn, signUp } from './actions';
 import { ActionState } from '@/lib/auth/middleware';
 import { SiteLogo } from '@/components/site/site-logo';
+import { validatePassword, isPasswordValid } from '@/lib/utils';
+import { PasswordRequirements } from '@/components/ui/password-requirements';
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams();
@@ -20,6 +22,12 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     mode === 'signin' ? signIn : signUp,
     { error: '' }
   );
+  const [password, setPassword] = useState('');
+  const [showRequirements, setShowRequirements] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  
+  const passwordValidation = validatePassword(password);
+  const isFormValid = mode === 'signin' || isPasswordValid(passwordValidation);
 
   return (
     <div className="min-h-[100dvh] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 bg-gray-50">
@@ -35,7 +43,17 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <form className="space-y-6" action={formAction}>
+        <form
+          ref={formRef}
+          className="space-y-6"
+          action={formAction}
+          onSubmit={(e) => {
+            if (mode === 'signup' && !isFormValid) {
+              e.preventDefault();
+              setShowRequirements(true);
+            }
+          }}
+        >
           <input type="hidden" name="redirect" value={redirect || ''} />
           <input type="hidden" name="priceId" value={priceId || ''} />
           <input type="hidden" name="inviteId" value={inviteId || ''} />
@@ -62,12 +80,22 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
           </div>
 
           <div>
-            <Label
-              htmlFor="password"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Password
-            </Label>
+            <div className="flex items-center justify-between">
+              <Label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Password
+              </Label>
+              {mode === 'signin' && (
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-primary hover:text-primary/80"
+                >
+                  Forgot password?
+                </Link>
+              )}
+            </div>
             <div className="mt-1">
               <Input
                 id="password"
@@ -76,7 +104,19 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 autoComplete={
                   mode === 'signin' ? 'current-password' : 'new-password'
                 }
-                defaultValue={state.password}
+                value={mode === 'signup' ? password : undefined}
+                defaultValue={mode === 'signin' ? state.password : undefined}
+                onChange={(e) => {
+                  if (mode === 'signup') {
+                    setPassword(e.target.value);
+                    setShowRequirements(true);
+                  }
+                }}
+                onFocus={() => {
+                  if (mode === 'signup') {
+                    setShowRequirements(true);
+                  }
+                }}
                 required
                 minLength={8}
                 maxLength={100}
@@ -84,6 +124,11 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 placeholder="Enter your password"
               />
             </div>
+            {mode === 'signup' && showRequirements && (
+              <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <PasswordRequirements validation={passwordValidation} />
+              </div>
+            )}
           </div>
 
           {state?.error && (
@@ -94,7 +139,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
             <Button
               type="submit"
               className="w-full flex justify-center items-center rounded-full"
-              disabled={pending}
+              disabled={pending || (mode === 'signup' && !isFormValid)}
             >
               {pending ? (
                 <>

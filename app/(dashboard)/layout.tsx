@@ -1,34 +1,52 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useState, Suspense } from 'react';
-import { Button } from '@/components/ui/button';
-import { BellRing, LogOut, Mail } from 'lucide-react';
+import Link from "next/link";
+import { useState, Suspense } from "react";
+import { Button } from "@/components/ui/button";
+import { BellRing, LogOut, Mail } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { signOut } from '@/app/(login)/actions';
-import { useRouter } from 'next/navigation';
-import { User } from '@/lib/db/schema';
-import useSWR, { mutate } from 'swr';
-import { SiteFooter } from '@/components/site/footer';
-import { SiteLogo } from '@/components/site/site-logo';
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { signOut } from "@/app/(login)/actions";
+import { useRouter } from "next/navigation";
+import { User, TeamDataWithMembers } from "@/lib/db/schema";
+import useSWR, { mutate } from "swr";
+import { SiteFooter } from "@/components/site/footer";
+import { SiteLogo } from "@/components/site/site-logo";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
+function isActiveSubscription(status: string | null | undefined) {
+  return status === "active" || status === "trialing";
+}
+
+function isProPlan(planName: string | null | undefined) {
+  return (planName ?? "").toLowerCase() === "pro";
+}
+
+function hasActiveProSubscription(
+  team: TeamDataWithMembers | null | undefined
+) {
+  if (!team) return false;
+  return (
+    isActiveSubscription(team.subscriptionStatus) && isProPlan(team.planName)
+  );
+}
+
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: user } = useSWR<User>("/api/user", fetcher);
+  const { data: team } = useSWR<TeamDataWithMembers>("/api/team", fetcher);
   const router = useRouter();
 
   async function handleSignOut() {
     await signOut();
-    mutate('/api/user');
-    router.push('/');
+    mutate("/api/user");
+    router.push("/");
   }
 
   if (!user) {
@@ -36,7 +54,7 @@ function UserMenu() {
       <>
         <Link
           href="/"
-          className="text-sm font-medium text-gray-700 hover:text-gray-900"
+          className="text-sm font-medium text-gray-700 hover:text-gray-900 hidden md:inline-flex"
         >
           Home
         </Link>
@@ -49,12 +67,14 @@ function UserMenu() {
         <Button asChild variant="outline" className="rounded-full">
           <Link href="/sign-in">Sign in</Link>
         </Button>
-        <Button asChild className="rounded-full">
+        <Button asChild className="hidden md:inline-flex rounded-full">
           <Link href="/sign-up">Get alerts</Link>
         </Button>
       </>
     );
   }
+
+  const hasProSubscription = hasActiveProSubscription(team);
 
   return (
     <>
@@ -70,16 +90,24 @@ function UserMenu() {
       >
         Notifications
       </Link>
+      {!hasProSubscription && (
+        <Link
+          href="/pricing"
+          className="text-sm font-medium text-gray-700 hover:text-gray-900"
+        >
+          Upgrade
+        </Link>
+      )}
 
       <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
         <DropdownMenuTrigger>
-          <Avatar className="cursor-pointer size-9">
-            <AvatarImage alt={user.name || ''} />
+          <Avatar className="cursor-pointer size-9 border-2 border-primary">
+            <AvatarImage alt={user.name || ""} />
             <AvatarFallback>
               {user.email
-                .split(' ')
+                .split(" ")
                 .map((n) => n[0])
-                .join('')}
+                .join("")}
             </AvatarFallback>
           </Avatar>
         </DropdownMenuTrigger>
@@ -130,10 +158,10 @@ function Header() {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <section className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-white">
       <Header />
       {children}
       <SiteFooter />
-    </section>
+    </div>
   );
 }

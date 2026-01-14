@@ -1,10 +1,10 @@
-import 'server-only';
+import "server-only";
 
-import { inArray, sql } from 'drizzle-orm';
-import { db } from '@/lib/db/drizzle';
-import { products } from '@/lib/db/schema';
-import type { NewProduct, NewProductsSnapshot } from '@/lib/stock/fetcher';
-import { MAX_TRACKED_PRODUCTS } from '@/lib/config/products';
+import { inArray, sql } from "drizzle-orm";
+import { db } from "@/lib/db/drizzle";
+import { products } from "@/lib/db/schema";
+import type { NewProduct, NewProductsSnapshot } from "@/lib/stock/fetcher";
+import { MAX_TRACKED_PRODUCTS } from "@/lib/config/products";
 
 export type NewArrivalDetected = {
   productId: number;
@@ -22,9 +22,11 @@ export type NewArrivalDetected = {
  * - We alert everyone when new products appear on the /new page
  * - Position changes don't trigger alerts - only truly new products do
  */
-export async function syncProductsAndDetectNewArrivals(snapshot: NewProductsSnapshot) {
+export async function syncProductsAndDetectNewArrivals(
+  snapshot: NewProductsSnapshot
+) {
   const topProducts = snapshot.products.slice(0, MAX_TRACKED_PRODUCTS);
-  
+
   if (topProducts.length === 0) {
     return { newArrivals: [] as NewArrivalDetected[] };
   }
@@ -82,7 +84,12 @@ export async function syncProductsAndDetectNewArrivals(snapshot: NewProductsSnap
     const insertedProducts = await tx
       .select()
       .from(products)
-      .where(inArray(products.externalId, newProducts.map((p) => p.externalId)));
+      .where(
+        inArray(
+          products.externalId,
+          newProducts.map((p) => p.externalId)
+        )
+      );
 
     // Build the new arrivals response using products directly
     const newArrivals = insertedProducts.map((dbProduct) => {

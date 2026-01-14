@@ -1,15 +1,17 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Loader2, Lock, Trash2 } from 'lucide-react';
 import { updateAccount, updatePassword, deleteAccount } from '@/app/(login)/actions';
-import { User } from '@/lib/db/schema';
+import { User, NotificationPreferences } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import { validatePassword, isPasswordValid } from '@/lib/utils';
+import { PasswordRequirements } from '@/components/ui/password-requirements';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -37,12 +39,14 @@ type AccountFormProps = {
   state: ActionState;
   nameValue?: string;
   emailValue?: string;
+  phoneNumberValue?: string | null;
 };
 
 function AccountForm({
   state,
   nameValue = '',
-  emailValue = ''
+  emailValue = '',
+  phoneNumberValue = ''
 }: AccountFormProps) {
   return (
     <>
@@ -71,18 +75,176 @@ function AccountForm({
           required
         />
       </div>
+      <div>
+        <Label htmlFor="phoneNumber" className="mb-2">
+          Phone Number
+        </Label>
+        <Input
+          id="phoneNumber"
+          name="phoneNumber"
+          type="tel"
+          placeholder="+15551234567"
+          defaultValue={phoneNumberValue || ''}
+        />
+        <p className="text-xs text-gray-600 mt-2">
+          Enter your phone number in E.164 format (e.g., +15551234567)
+        </p>
+      </div>
     </>
   );
 }
 
 function AccountFormWithData({ state }: { state: ActionState }) {
   const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: prefs } = useSWR<NotificationPreferences>(
+    '/api/notification-preferences',
+    fetcher
+  );
   return (
     <AccountForm
       state={state}
       nameValue={user?.name ?? ''}
       emailValue={user?.email ?? ''}
+      phoneNumberValue={prefs?.phoneNumber ?? ''}
     />
+  );
+}
+
+function PasswordUpdateForm({
+  passwordState,
+  passwordAction,
+  isPasswordPending,
+}: {
+  passwordState: PasswordState;
+  passwordAction: (formData: FormData) => void;
+  isPasswordPending: boolean;
+}) {
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showRequirements, setShowRequirements] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const passwordValidation = validatePassword(newPassword);
+  const passwordsMatch = newPassword === confirmPassword;
+  const isFormValid =
+    currentPassword.length > 0 &&
+    isPasswordValid(passwordValidation) &&
+    passwordsMatch &&
+    currentPassword !== newPassword;
+
+  return (
+    <form
+      ref={formRef}
+      className="space-y-4"
+      action={passwordAction}
+      onSubmit={(e) => {
+        if (!isFormValid) {
+          e.preventDefault();
+          setShowRequirements(true);
+        }
+      }}
+    >
+      <div>
+        <Label htmlFor="current-password" className="mb-2">
+          Current Password
+        </Label>
+        <Input
+          id="current-password"
+          name="currentPassword"
+          type="password"
+          autoComplete="current-password"
+          value={currentPassword}
+          onChange={(e) => setCurrentPassword(e.target.value)}
+          required
+          minLength={8}
+          maxLength={100}
+        />
+      </div>
+      <div>
+        <Label htmlFor="new-password" className="mb-2">
+          New Password
+        </Label>
+        <Input
+          id="new-password"
+          name="newPassword"
+          type="password"
+          autoComplete="new-password"
+          value={newPassword}
+          onChange={(e) => {
+            setNewPassword(e.target.value);
+            setShowRequirements(true);
+          }}
+          onFocus={() => setShowRequirements(true)}
+          required
+          minLength={8}
+          maxLength={100}
+        />
+        {showRequirements && (
+          <div className="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <PasswordRequirements validation={passwordValidation} />
+          </div>
+        )}
+      </div>
+      <div>
+        <Label htmlFor="confirm-password" className="mb-2">
+          Confirm New Password
+        </Label>
+        <Input
+          id="confirm-password"
+          name="confirmPassword"
+          type="password"
+          value={confirmPassword}
+          onChange={(e) => {
+            setConfirmPassword(e.target.value);
+            setShowRequirements(true);
+          }}
+          onFocus={() => setShowRequirements(true)}
+          required
+          minLength={8}
+          maxLength={100}
+          className={
+            confirmPassword && !passwordsMatch
+              ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
+              : ''
+          }
+        />
+        {confirmPassword && !passwordsMatch && (
+          <p className="mt-1 text-sm text-red-600">Passwords do not match</p>
+        )}
+        {confirmPassword && passwordsMatch && (
+          <p className="mt-1 text-sm text-green-600">Passwords match</p>
+        )}
+        {currentPassword && newPassword && currentPassword === newPassword && (
+          <p className="mt-1 text-sm text-red-600">
+            New password must be different from current password
+          </p>
+        )}
+      </div>
+      {passwordState.error ? (
+        <p className="text-red-500 text-sm">{passwordState.error}</p>
+      ) : null}
+      {passwordState.success ? (
+        <p className="text-green-500 text-sm">{passwordState.success}</p>
+      ) : null}
+      <Button
+        type="submit"
+        className="bg-primary hover:bg-primary/90 text-primary-foreground"
+        disabled={isPasswordPending || !isFormValid}
+      >
+        {isPasswordPending ? (
+          <>
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            Updating...
+          </>
+        ) : (
+          <>
+            <Lock className="mr-2 h-4 w-4" />
+            Update Password
+          </>
+        )}
+      </Button>
+    </form>
   );
 }
 
@@ -149,75 +311,11 @@ export default function GeneralPage() {
           <CardTitle>Password</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" action={passwordAction}>
-            <div>
-              <Label htmlFor="current-password" className="mb-2">
-                Current Password
-              </Label>
-              <Input
-                id="current-password"
-                name="currentPassword"
-                type="password"
-                autoComplete="current-password"
-                required
-                minLength={8}
-                maxLength={100}
-                defaultValue={passwordState.currentPassword}
-              />
-            </div>
-            <div>
-              <Label htmlFor="new-password" className="mb-2">
-                New Password
-              </Label>
-              <Input
-                id="new-password"
-                name="newPassword"
-                type="password"
-                autoComplete="new-password"
-                required
-                minLength={8}
-                maxLength={100}
-                defaultValue={passwordState.newPassword}
-              />
-            </div>
-            <div>
-              <Label htmlFor="confirm-password" className="mb-2">
-                Confirm New Password
-              </Label>
-              <Input
-                id="confirm-password"
-                name="confirmPassword"
-                type="password"
-                required
-                minLength={8}
-                maxLength={100}
-                defaultValue={passwordState.confirmPassword}
-              />
-            </div>
-            {passwordState.error ? (
-              <p className="text-red-500 text-sm">{passwordState.error}</p>
-            ) : null}
-            {passwordState.success ? (
-              <p className="text-green-500 text-sm">{passwordState.success}</p>
-            ) : null}
-            <Button
-              type="submit"
-              className="bg-primary hover:bg-primary/90 text-primary-foreground"
-              disabled={isPasswordPending}
-            >
-              {isPasswordPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <Lock className="mr-2 h-4 w-4" />
-                  Update Password
-                </>
-              )}
-            </Button>
-          </form>
+          <PasswordUpdateForm
+            passwordState={passwordState}
+            passwordAction={passwordAction}
+            isPasswordPending={isPasswordPending}
+          />
         </CardContent>
       </Card>
 

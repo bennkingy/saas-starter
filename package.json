@@ -6,17 +6,12 @@
     "start": "next start",
     "db:setup": "npx tsx lib/db/setup.ts",
     "db:seed": "npx tsx lib/db/seed.ts",
-    "db:delete-fake-product": "npx tsx scripts/delete-fake-product.ts",
     "db:clear-products": "npx tsx scripts/clear-all-products.ts",
-    "db:diagnose": "npx tsx scripts/diagnose-notifications.ts",
     "db:release-lock": "npx tsx scripts/release-cron-lock.ts",
-    "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:reset-notified-events": "npx tsx scripts/reset-notified-events.ts",
-    "db:check-events": "npx tsx scripts/check-stock-events.ts",
-    "db:remove-test-emails": "npx tsx scripts/remove-test-emails.ts",
-    "cron": "npx tsx scripts/run-cron.ts"
+    "cron": "npx tsx scripts/run-cron.ts",
+    "test:sms": "npx tsx scripts/test-sms.ts"
   },
   "dependencies": {
     "@tailwindcss/postcss": "4.1.7",
@@ -40,6 +35,7 @@
     "radix-ui": "^1.4.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "recharts": "^3.6.0",
     "resend": "^6.7.0",
     "server-only": "^0.0.1",
     "stripe": "^18.1.0",
@@ -47,7 +43,6 @@
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "4.1.7",
     "tw-animate-css": "^1.3.0",
-    "twilio": "^5.11.2",
     "typescript": "^5.8.3",
     "zod": "^3.24.4"
   },

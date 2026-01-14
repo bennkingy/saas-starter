@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull, isNotNull } from "drizzle-orm";
+import { desc, and, eq, isNull, isNotNull, sql, count, gte } from "drizzle-orm";
 import { db } from "./drizzle";
 import {
   activityLogs,
@@ -162,6 +162,7 @@ export async function getNotificationPreferencesForUser() {
 }
 
 export async function updateNotificationPreferencesForUser(input: {
+  emailEnabled: boolean;
   smsEnabled: boolean;
   phoneNumber: string | null;
 }) {
@@ -175,8 +176,7 @@ export async function updateNotificationPreferencesForUser(input: {
   const updated = await db
     .update(notificationPreferences)
     .set({
-      // Email is required for the product. We keep it enabled.
-      emailEnabled: true,
+      emailEnabled: input.emailEnabled,
       smsEnabled: input.smsEnabled,
       phoneNumber: input.phoneNumber,
       updatedAt: new Date(),
@@ -238,4 +238,93 @@ export async function getRecentNewArrivals(limit = 40) {
     .where(isNotNull(products.lastCheckedAt))
     .orderBy(desc(products.createdAt))
     .limit(limit);
+}
+
+/**
+ * Admin queries for dashboard statistics
+ */
+export async function getAdminStats() {
+  const user = await getUser();
+  if (!user || user.role !== "admin") {
+    throw new Error("Unauthorized: Admin access required");
+  }
+
+  // Get total users (not deleted)
+  const totalUsers = await db
+    .select({ count: count() })
+    .from(users)
+    .where(isNull(users.deletedAt));
+
+  // Get pro users (users with active pro subscriptions)
+  const proUserIds = await db
+    .select({ userId: teamMembers.userId })
+    .from(teamMembers)
+    .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+    .where(
+      and(
+        eq(teams.planName, "Pro"),
+        sql`${teams.subscriptionStatus} IN ('active', 'trialing')`
+      )
+    );
+
+  const proUserIdsSet = new Set(
+    proUserIds.map((r) => r.userId).filter(Boolean)
+  );
+
+  // Get free users (total users minus pro users)
+  const allUserIds = await db
+    .select({ id: users.id })
+    .from(users)
+    .where(isNull(users.deletedAt));
+
+  const freeUsersCount = allUserIds.filter(
+    (u) => !proUserIdsSet.has(u.id)
+  ).length;
+
+  const proUsersCount = proUserIdsSet.size;
+
+  // Get pro signups over time (last 30 days)
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+  const proSignups = await db
+    .select({
+      date: sql<string>`${teams.createdAt}::date::text`,
+      count: count(),
+    })
+    .from(teams)
+    .where(
+      and(
+        gte(teams.createdAt, thirtyDaysAgo),
+        eq(teams.planName, "Pro"),
+        sql`${teams.subscriptionStatus} IN ('active', 'trialing')`
+      )
+    )
+    .groupBy(sql`${teams.createdAt}::date`)
+    .orderBy(sql`${teams.createdAt}::date`);
+
+  // Get user signups over time (last 30 days)
+  const userSignups = await db
+    .select({
+      date: sql<string>`${users.createdAt}::date::text`,
+      count: count(),
+    })
+    .from(users)
+    .where(and(isNull(users.deletedAt), gte(users.createdAt, thirtyDaysAgo)))
+    .groupBy(sql`${users.createdAt}::date`)
+    .orderBy(sql`${users.createdAt}::date`);
+
+  return {
+    totalUsers: totalUsers[0]?.count ?? 0,
+    freeUsers: freeUsersCount,
+    proUsers: proUsersCount,
+    proSignups: proSignups.map((s) => ({
+      date: s.date,
+      count: Number(s.count),
+    })),
+    userSignups: userSignups.map((s) => ({
+      date: s.date,
+      count: Number(s.count),
+    })),
+  };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, Suspense } from "react";
+import { useActionState, Suspense, useState, useEffect } from "react";
 import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +24,7 @@ import { updateNotificationPreferencesAction } from "./actions";
 type ActionState = {
   error?: string;
   success?: string;
+  emailEnabled?: boolean;
   smsEnabled?: boolean;
   phoneNumber?: string;
 };
@@ -68,14 +69,20 @@ function PreferencesForm({ state }: { state: ActionState }) {
   const proPlan = isProPlan(team?.planName);
   const smsAvailable = subscriptionActive && proPlan;
 
-  const smsUnavailableReason = !subscriptionActive
-    ? "Active subscription required."
-    : !proPlan
-    ? "Disabled."
-    : null;
+  const emailEnabledValue = state.emailEnabled ?? prefs?.emailEnabled ?? false;
+  const smsEnabledValue = state.smsEnabled ?? prefs?.smsEnabled ?? false;
+  const phoneNumberValue = state.phoneNumber ?? prefs?.phoneNumber ?? "";
 
-  const smsEnabledValue = prefs?.smsEnabled ?? false;
-  const phoneNumberValue = prefs?.phoneNumber ?? "";
+  const [emailEnabled, setEmailEnabled] = useState(emailEnabledValue);
+  const [smsEnabled, setSmsEnabled] = useState(smsEnabledValue);
+
+  useEffect(() => {
+    setEmailEnabled(emailEnabledValue);
+  }, [emailEnabledValue]);
+
+  useEffect(() => {
+    setSmsEnabled(smsEnabledValue);
+  }, [smsEnabledValue]);
 
   return (
     <>
@@ -83,92 +90,137 @@ function PreferencesForm({ state }: { state: ActionState }) {
         <CardHeader>
           <CardTitle>Subscription</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="font-medium text-gray-900">
-                Status:{" "}
-                <span className="capitalize mb-3 block">
+                <span className="capitalize mb-3">
                   {team?.subscriptionStatus || "free plan"}
                 </span>
-              </p>
-              <p className="text-sm text-gray-600">Email alerts: Enabled</p>
-              <p className="text-sm text-gray-600">
-                SMS alerts: {smsAvailable ? "available" : "Disabled"}
               </p>
             </div>
             <Button asChild>
               <a href="/pricing">Manage plan</a>
             </Button>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>Delivery</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <Label className="mb-2">Email (required)</Label>
-            <Input value={user?.email ?? ""} readOnly />
-            <p className="text-xs text-gray-600 mt-2">
-              Email alerts are free and always enabled for new arrival
-              notifications.
-            </p>
-          </div>
-
-          <div className="border-t border-gray-200 pt-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <Label className="mb-1">SMS alerts</Label>
-                <p className="text-xs text-gray-600">
-                  Optional. Requires an active Pro plan (£3/month).
-                </p>
-              </div>
-              {smsUnavailableReason ? (
-                <Button asChild className="shrink-0">
-                  <a href="/pricing">Upgrade</a>
-                </Button>
-              ) : (
-                <label className="inline-flex items-center gap-2">
+          <div className="border-t border-gray-200 pt-6 space-y-6">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <label className="relative inline-flex items-center cursor-pointer">
                   <input
-                    name="smsEnabled"
+                    name="emailEnabled"
                     type="checkbox"
-                    defaultChecked={smsEnabledValue}
-                    className="h-4 w-4 accent-primary"
+                    checked={emailEnabled}
+                    onChange={(e) => setEmailEnabled(e.target.checked)}
+                    className="sr-only peer"
                   />
-                  <span className="text-sm text-gray-900">Enabled</span>
+                  <div
+                    className={`w-11 h-6 rounded-full relative after:content-[''] after:absolute after:top-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all ${
+                      emailEnabled
+                        ? "bg-primary after:right-[2px]"
+                        : "bg-gray-200 after:left-[2px]"
+                    }`}
+                  ></div>
                 </label>
+                <div>
+                  <span className="text-sm font-medium text-gray-900">
+                    Email alerts
+                  </span>
+                  <p className="text-xs text-gray-600">
+                    Email alerts are free always.
+                  </p>
+                </div>
+              </div>
+              {emailEnabled && (
+                <div className="ml-14">
+                  <Label htmlFor="email" className="mb-2">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    value={user?.email ?? ""}
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
               )}
             </div>
 
-            <div className="mt-4">
-              <Label htmlFor="phoneNumber" className="mb-2">
-                Phone number (E.164)
-              </Label>
-              <Input
-                id="phoneNumber"
-                name="phoneNumber"
-                placeholder="+15551234567"
-                defaultValue={phoneNumberValue}
-                disabled={Boolean(smsUnavailableReason) || !smsEnabledValue}
-              />
-              {smsUnavailableReason ? (
-                <p className="text-xs text-gray-600 mt-2">
-                  {smsUnavailableReason}{" "}
-                  <a
-                    href="/pricing"
-                    className="text-primary underline underline-offset-4 hover:text-primary/90"
-                  >
-                    Upgrade
-                  </a>
-                </p>
-              ) : null}
-              <p className="text-xs text-gray-600 mt-2">
-                TODO: SMS provider integration (Twilio) is scaffolded and must
-                be configured before sending.
-              </p>
+            <div className="border-t border-gray-200 pt-6">
+              <div className="flex items-start justify-between gap-4 mb-4">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-3">
+                    <label
+                      className={`relative inline-flex items-center ${
+                        smsAvailable ? "cursor-pointer" : "cursor-not-allowed"
+                      }`}
+                    >
+                      <input
+                        name="smsEnabled"
+                        type="checkbox"
+                        checked={smsAvailable && smsEnabled}
+                        disabled={!smsAvailable}
+                        onChange={(e) =>
+                          smsAvailable && setSmsEnabled(e.target.checked)
+                        }
+                        className="sr-only peer"
+                      />
+                      <div
+                        className={`w-11 h-6 rounded-full relative after:content-[''] after:absolute after:top-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all ${
+                          smsAvailable && smsEnabled
+                            ? "bg-primary after:right-[2px]"
+                            : "bg-gray-200 after:left-[2px]"
+                        } ${!smsAvailable ? "opacity-50" : ""}`}
+                      ></div>
+                    </label>
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">
+                        SMS alerts
+                      </span>
+                      <p className="text-xs text-gray-600">
+                        Requires an active Pro plan (£3/month).
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                {!smsAvailable && (
+                  <Button asChild className="shrink-0">
+                    <a href="/pricing">Upgrade</a>
+                  </Button>
+                )}
+              </div>
+              {smsEnabled && smsAvailable && (
+                <div className="ml-14">
+                  <Label htmlFor="phoneNumber" className="mb-2">
+                    Phone number (E.164)
+                  </Label>
+                  <Input
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    placeholder="+15551234567"
+                    defaultValue={phoneNumberValue}
+                  />
+                  <p className="text-xs text-gray-600 mt-2">
+                    Enter your phone number in E.164 format (e.g.,
+                    +15551234567). You'll receive SMS alerts when new Jellycats
+                    are detected.
+                  </p>
+                </div>
+              )}
+              {!smsAvailable && (
+                <div className="ml-14">
+                  <p className="text-xs text-gray-600">
+                    Active subscription required.{" "}
+                    <a
+                      href="/pricing"
+                      className="text-primary underline underline-offset-4 hover:text-primary/90"
+                    >
+                      Upgrade
+                    </a>
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </CardContent>

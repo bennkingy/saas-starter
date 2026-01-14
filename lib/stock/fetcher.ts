@@ -202,6 +202,15 @@ function extractProductIdFromUrl(url: string): string {
   return hasDigit ? lastPart : lastSegment;
 }
 
+function cleanProductName(name: string): string {
+  /**
+   * Remove common suffixes from product names that appear in image alt text.
+   * Examples:
+   * - "Product Name, Main View" -> "Product Name"
+   */
+  return name.replace(/, Main View$/i, "").trim();
+}
+
 function parseProductsFromHtml(html: string): NewProduct[] {
   const $ = cheerio.load(html);
   const products: NewProduct[] = [];
@@ -242,13 +251,16 @@ function parseProductsFromHtml(html: string): NewProduct[] {
 
       // Get product name from image alt, title attribute, or nested text
       const $img = $el.find("img").first();
-      const name =
+      const rawName =
         $img.attr("alt") ||
         $el.attr("title") ||
         $el.find('[class*="name"], [class*="title"]').text().trim() ||
         $el.text().trim();
 
-      if (!name || name.length < 2) return;
+      if (!rawName || rawName.length < 2) return;
+
+      // Clean the product name (remove ", Main View" and similar suffixes)
+      const name = cleanProductName(rawName);
 
       // Get image URL
       const imageUrl = $img.attr("src") || $img.attr("data-src");
