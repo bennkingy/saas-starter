@@ -24,7 +24,7 @@ export function SiteLogo({ variant, href, showText = true }: SiteLogoProps) {
   const catClassName = isHeader ? "h-5 w-5" : "h-5 w-5 text-slate-900";
 
   const bellClassName = isHeader
-    ? "absolute -right-0.5 -top-0.5 h-3.5 w-3.5 text-primary-foreground"
+    ? "absolute -right-0 -top-0 h-3.5 w-3.5 text-primary-foreground"
     : "absolute -right-0.5 -top-0.5 h-3.5 w-3.5 text-slate-900";
 
   const textClassName = isHeader
