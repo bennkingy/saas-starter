@@ -91,7 +91,7 @@ export function HeroParallaxImage({ src, alt }: HeroParallaxImageProps) {
       ref={containerRef}
       onPointerMove={handlePointerMove}
       onPointerLeave={handlePointerLeave}
-      className="relative mx-auto w-full max-w-lg"
+      className="relative mx-auto w-full max-w-sm sm:max-w-md md:max-w-lg"
     >
       <div className="absolute -inset-8 -z-10 rounded-[2.5rem] bg-primary/10 blur-3xl" />
 

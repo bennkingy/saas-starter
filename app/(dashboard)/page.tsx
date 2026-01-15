@@ -49,23 +49,23 @@ export default async function HomePage() {
 
   return (
     <main>
-      <section className="relative py-20 overflow-hidden bg-gradient-to-b from-white to-gray-50">
+      <section className="relative py-12 sm:py-16 md:py-20 overflow-hidden bg-gradient-to-b from-white to-gray-50">
         <div className="pointer-events-none absolute -right-28 -top-28 h-[27rem] w-[27rem] rounded-full bg-primary/10 blur-3xl" />
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute -top-32 left-1/2 h-[34rem] w-[34rem] -translate-x-1/2 rounded-full bg-primary/10 blur-3xl" />
           <div className="absolute -bottom-40 -right-32 h-[28rem] w-[28rem] rounded-full bg-primary/10 blur-3xl" />
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
-            <div className="max-w-2xl text-center lg:text-left">
+          <div className="grid gap-8 md:gap-10 lg:gap-12 md:grid-cols-2 md:items-center">
+            <div className="max-w-2xl mx-auto md:mx-0 text-center md:text-left">
               <h1 className="text-4xl font-bold text-gray-900 tracking-tight sm:text-5xl md:text-6xl">
                 Never miss a
                 <span className="block text-primary">Jellycat drop again!</span>
               </h1>
-              <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-xl lg:text-lg xl:text-xl">
+              <p className="mt-3 text-base text-gray-500 sm:mt-5 sm:text-xl md:text-lg lg:text-xl">
                 Get instantly alerted for new arrivals.
               </p>
-              <div className="mt-8 flex flex-col items-center gap-3 lg:items-start">
+              <div className="mt-8 flex flex-col items-center md:items-start gap-3">
                 <a href="/pricing" className="!cursor-pointer">
                   <Button
                     size="lg"
@@ -84,10 +84,12 @@ export default async function HomePage() {
               </div>
             </div>
 
-            <HeroParallaxImage
-              src="https://static.independent.co.uk/2025/09/23/0/43/jellycat-hero.png"
-              alt="Jellycat plush toys"
-            />
+            <div className="mt-8 md:mt-0">
+              <HeroParallaxImage
+                src="https://static.independent.co.uk/2025/09/23/0/43/jellycat-hero.png"
+                alt="Jellycat plush toys"
+              />
+            </div>
           </div>
         </div>
       </section>
