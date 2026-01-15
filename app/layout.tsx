@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   applicationName: SITE_NAME,
   icons: {
     icon: [
-      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/icon.ico", type: "image/x-icon" },
     ],
   },
   keywords: [
