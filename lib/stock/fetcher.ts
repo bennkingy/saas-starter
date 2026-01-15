@@ -153,7 +153,7 @@ async function fetchNewPageHtml() {
       headers,
       cache: "no-store",
     },
-    { maxAttempts: 5, timeoutMs: 12_000 }
+    { maxAttempts: 2, timeoutMs: 5_000 }
   );
 
   if (response.status === 304) {

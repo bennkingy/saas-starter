@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { NOTIFICATIONS_CONFIG } from "@/lib/config/notifications";
 import { fetchNewProductsSnapshot } from "@/lib/stock/fetcher";
 import { syncProductsAndDetectNewArrivals } from "@/lib/stock/differ";
-import { notifySubscribersOfNewArrivals } from "@/lib/notifications/notifier";
 import { client } from "@/lib/db/drizzle";
 
 export const runtime = "nodejs";
@@ -51,12 +50,14 @@ async function runNewArrivalsCheck(request: Request) {
 
   const lockAcquired = await tryAcquireCronLock();
   if (!lockAcquired) {
+    console.log("[cron] ⚠️ Lock not acquired - previous run may still be executing");
     return NextResponse.json(
       { skipped: true, reason: "lock-not-acquired" },
       { status: 409 }
     );
   }
 
+  const startTime = Date.now();
   try {
     /**
      * Expected schedule: once per minute (or as desired).
@@ -112,41 +113,34 @@ async function runNewArrivalsCheck(request: Request) {
       });
     }
 
+    // Trigger notifications asynchronously (fire-and-forget)
+    const productIds = newArrivals.map((a) => a.productId);
     console.log(
-      `[cron] Calling notifier with ${newArrivals.length} new arrivals`
+      `[cron] Triggering async notification job for ${productIds.length} new arrivals`
     );
-    try {
-      const { notifiedProductIds } = await notifySubscribersOfNewArrivals({
-        newArrivals,
-      });
-      console.log(
-        `[cron] Notifier returned ${notifiedProductIds.length} notified product IDs`
-      );
-      console.log(`[cron] Notified product IDs:`, notifiedProductIds);
+    
+    const notifyUrl = new URL("/api/cron/notify", request.url);
+    
+    fetch(notifyUrl.toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${cronSecret}`,
+      },
+      body: JSON.stringify({ productIds }),
+    }).catch((error) => {
+      console.error("[cron] ⚠️ Failed to trigger notification job:", error);
+    });
 
-      return NextResponse.json({
-        productsFound: snapshot.products.length,
-        newArrivalsDetected: newArrivals.length,
-        productsNotified: notifiedProductIds.length,
-      });
-    } catch (error) {
-      console.error("[cron] ❌ Error in notifier:", error);
-      console.error(
-        "[cron] Error stack:",
-        error instanceof Error ? error.stack : "No stack trace"
-      );
-      return NextResponse.json(
-        {
-          error: "Failed to send notifications",
-          details: error instanceof Error ? error.message : String(error),
-          productsFound: snapshot.products.length,
-          newArrivalsDetected: newArrivals.length,
-          productsNotified: 0,
-        },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json({
+      productsFound: snapshot.products.length,
+      newArrivalsDetected: newArrivals.length,
+      productsNotified: 0,
+      notificationJobTriggered: true,
+    });
   } finally {
+    const executionTime = Date.now() - startTime;
+    console.log(`[cron] ⏱️ Execution completed in ${executionTime}ms`);
     await releaseCronLock();
   }
 }
