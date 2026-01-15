@@ -6,9 +6,13 @@ export const runtime = 'nodejs';
 async function sendTestEmail(email: string) {
   await sendNewArrivalEmail({
     to: email,
-    productName: 'Test Jellycat Product',
-    productUrl: 'https://www.jellycat.com/us/test-product',
-    imageUrl: 'https://www.jellycat.com/images/test.jpg',
+    products: [
+      {
+        name: 'Test Jellycat Product',
+        url: 'https://www.jellycat.com/us/test-product',
+        imageUrl: 'https://www.jellycat.com/images/test.jpg',
+      },
+    ],
   });
 
   return NextResponse.json({
