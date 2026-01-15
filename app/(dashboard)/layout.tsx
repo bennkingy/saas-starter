@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState, Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { BellRing, LogOut, Mail } from "lucide-react";
+import { BellRing, LogOut, Mail, Settings, BarChart3 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,6 +127,20 @@ function UserMenu() {
               <span>Notifications</span>
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer">
+            <Link href="/dashboard/general" className="flex w-full items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              <span>General</span>
+            </Link>
+          </DropdownMenuItem>
+          {user?.role === "admin" && (
+            <DropdownMenuItem className="cursor-pointer">
+              <Link href="/dashboard/admin" className="flex w-full items-center">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                <span>Admin</span>
+              </Link>
+            </DropdownMenuItem>
+          )}
           <form action={handleSignOut} className="w-full">
             <button type="submit" className="flex w-full">
               <DropdownMenuItem className="w-full flex-1 cursor-pointer">
