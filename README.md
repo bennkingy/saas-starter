@@ -87,8 +87,8 @@ SMS notifications are available for Pro plan subscribers. To enable SMS function
      ```
 
 2. **Test SMS functionality:**
-   - Use the test endpoint: `GET /api/test/sms?phone=+15551234567`
-   - Or send a POST request with `{ "phone": "+15551234567" }`
+   - Use the test endpoint: `GET /api/test/sms?phone=+447911123456`
+   - Or send a POST request with `{ "phone": "+447911123456" }`
 
 ## Testing Payments
 

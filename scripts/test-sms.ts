@@ -10,10 +10,10 @@ async function testSms() {
     console.error("❌ Error: Phone number is required");
     console.log("");
     console.log("Usage:");
-    console.log("  pnpm test:sms +1234567890");
+    console.log("  pnpm test:sms +447911123456");
     console.log("  or set TEST_PHONE_NUMBER in .env file");
     console.log("");
-    console.log("Phone number should be in E.164 format (e.g., +1234567890)");
+    console.log("Phone number should be in E.164 format (e.g., +447911123456)");
     process.exit(1);
   }
 
@@ -21,7 +21,7 @@ async function testSms() {
     console.error(
       "❌ Error: Phone number must be in E.164 format (start with +)"
     );
-    console.log("Example: +1234567890");
+    console.log("Example: +447911123456");
     process.exit(1);
   }
 

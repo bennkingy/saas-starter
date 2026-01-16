@@ -198,12 +198,12 @@ function PreferencesForm({ state }: { state: ActionState }) {
                   <Input
                     id="phoneNumber"
                     name="phoneNumber"
-                    placeholder="+15551234567"
+                    placeholder="+447911123456"
                     defaultValue={phoneNumberValue}
                   />
                   <p className="text-xs text-gray-600 mt-2">
-                    Enter your phone number in E.164 format (e.g.,
-                    +15551234567). You'll receive SMS alerts when new Jellycats
+                    Enter your phone number (e.g.,
+                    +447911123456). You'll receive SMS alerts when new Jellycats
                     are detected.
                   </p>
                 </div>

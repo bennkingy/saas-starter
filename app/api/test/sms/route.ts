@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
     if (!phoneNumber || typeof phoneNumber !== 'string') {
       return NextResponse.json(
-        { error: 'Phone number is required. Use ?phone=+15551234567 (E.164 format)' },
+        { error: 'Phone number is required. Use ?phone=+447911123456 (E.164 format)' },
         { status: 400 }
       );
     }
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
 
     if (!phone || typeof phone !== 'string') {
       return NextResponse.json(
-        { error: 'Phone number is required (E.164 format, e.g., +15551234567)' },
+        { error: 'Phone number is required (E.164 format, e.g., +447911123456)' },
         { status: 400 }
       );
     }

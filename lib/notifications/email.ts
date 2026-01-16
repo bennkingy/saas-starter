@@ -82,7 +82,7 @@ export async function sendNewArrivalEmail({
         <p style="margin: 0 0 16px;">
           <a href="${
             product.url
-          }" style="display: inline-block; background-color: #33cee5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+          }" style="display: inline-block; background-color: #33cee5; color: #1f2937; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
             View Product →
           </a>
         </p>
@@ -179,7 +179,7 @@ export async function sendPasswordResetEmail({
         You requested a password reset. Click the button below to reset your password:
       </p>
       <p style="margin: 0 0 24px;">
-        <a href="${resetUrl}" style="display: inline-block; background-color: #33cee5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
+        <a href="${resetUrl}" style="display: inline-block; background-color: #33cee5; color: #1f2937; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
           Reset Password →
         </a>
       </p>
