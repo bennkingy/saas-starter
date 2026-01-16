@@ -119,16 +119,13 @@ async function runNewArrivalsCheck(request: Request) {
       `[cron] Triggering async notification job for ${productIds.length} new arrivals`
     );
     
-    // Construct the notification URL
-    // In Vercel, we need to use the full URL with the deployment URL
-    // VERCEL_URL is available in preview deployments, VERCEL_BRANCH_URL for branch deployments
-    // In production, use the request origin
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
-    const notifyUrl = `${baseUrl}/api/cron/notify`;
+    // For internal API calls in Vercel, construct URL from request origin
+    // This ensures the call stays within the same deployment and bypasses Vercel's edge protection
+    const requestUrl = new URL(request.url);
+    const notifyUrl = `${requestUrl.origin}/api/cron/notify`;
     
     console.log(`[cron] Notification URL: ${notifyUrl}`);
+    console.log(`[cron] Request origin: ${requestUrl.origin}`);
     console.log(`[cron] Product IDs to notify:`, productIds);
     console.log(`[cron] CRON_SECRET present: ${!!cronSecret}`);
     
