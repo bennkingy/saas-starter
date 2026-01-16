@@ -116,10 +116,12 @@ export async function notifySubscribersOfNewArrivals({
   );
 
   // Filter recipients: include users with either email OR SMS enabled
+  // Note: emailEnabled defaults to true in schema, so null means enabled by default
   console.log(`[notifier] Filtering recipients for email or SMS enabled...`);
   const activeRecipients = recipients.filter((r) => {
     // Include recipients with either email or SMS enabled
-    const emailEnabled = r.emailEnabled === true;
+    // emailEnabled is null when user has no preferences, which means enabled by default (schema default is true)
+    const emailEnabled = r.emailEnabled !== false; // true or null means enabled
     const smsEnabled = r.smsEnabled === true;
     const hasPhoneNumber = Boolean(r.phoneNumber);
     const canSendSms = true;
@@ -131,7 +133,7 @@ export async function notifySubscribersOfNewArrivals({
     // });
     const isActive = emailEnabled || canSendSms;
     console.log(
-      `[notifier]   Checking ${r.email}: emailEnabled=${r.emailEnabled}, smsEnabled=${r.smsEnabled}, hasPhoneNumber=${hasPhoneNumber}, canSendSms=${canSendSms}, isActive=${isActive}`
+      `[notifier]   Checking ${r.email}: emailEnabled=${r.emailEnabled} (treated as ${emailEnabled}), smsEnabled=${r.smsEnabled}, hasPhoneNumber=${hasPhoneNumber}, canSendSms=${canSendSms}, isActive=${isActive}`
     );
     return isActive;
   });
