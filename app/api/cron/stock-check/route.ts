@@ -76,6 +76,7 @@ async function runNewArrivalsCheck(request: Request) {
 
     if (snapshot.notModified) {
       console.log("[cron] Snapshot not modified (304)");
+      await releaseCronLock();
       return NextResponse.json({
         notModified: true,
         productsFound: 0,
@@ -98,6 +99,7 @@ async function runNewArrivalsCheck(request: Request) {
 
     if (isDryRun) {
       console.log("[cron] Dry run mode - skipping notifications");
+      await releaseCronLock();
       return NextResponse.json({
         dryRun: true,
         productsFound: snapshot.products.length,
@@ -110,6 +112,7 @@ async function runNewArrivalsCheck(request: Request) {
 
     if (newArrivals.length === 0) {
       console.log("[cron] No new arrivals to notify");
+      await releaseCronLock();
       return NextResponse.json({
         productsFound: snapshot.products.length,
         newArrivalsDetected: 0,
@@ -117,65 +120,77 @@ async function runNewArrivalsCheck(request: Request) {
       });
     }
 
-    // Trigger notifications directly (avoiding HTTP call to bypass Vercel deployment protection)
+    // Prepare response data
     const productIds = newArrivals.map((a) => a.productId);
-    console.log(
-      `[cron] Triggering notification job directly for ${productIds.length} new arrivals`
-    );
-    console.log(`[cron] Product IDs to notify:`, productIds);
-    
-    // Call the notification function directly instead of making an HTTP request
-    // This bypasses Vercel's deployment protection and is more efficient
-    (async () => {
-      try {
-        console.log(`[cron] Fetching products from database...`);
-        const dbProducts = await db
-          .select()
-          .from(products)
-          .where(inArray(products.id, productIds));
-
-        if (dbProducts.length === 0) {
-          console.log(`[cron] No products found for IDs: ${productIds}`);
-          return;
-        }
-
-        console.log(`[cron] Found ${dbProducts.length} products, preparing notifications...`);
-        const newArrivals = dbProducts.map((p) => ({
-          productId: p.id,
-          externalId: p.externalId,
-          name: p.name,
-          url: p.url,
-          imageUrl: p.imageUrl ?? null,
-          detectedAt: p.createdAt,
-        }));
-
-        const { notifiedProductIds } = await notifySubscribersOfNewArrivals({
-          newArrivals,
-        });
-
-        console.log(
-          `[cron] ✅ Notification job completed: ${notifiedProductIds.length} products notified`
-        );
-      } catch (error) {
-        console.error("[cron] ❌ Failed to process notification job:", error);
-        console.error("[cron] Error details:", {
-          message: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-          name: error instanceof Error ? error.name : undefined,
-        });
-      }
-    })();
-
-    return NextResponse.json({
+    const responseData = {
       productsFound: snapshot.products.length,
       newArrivalsDetected: newArrivals.length,
       productsNotified: 0,
-      notificationJobTriggered: true,
-    });
-  } finally {
+      notificationJobTriggered: productIds.length > 0,
+    };
+
+    // Release lock BEFORE notifications (so next cron can run even if notifications are still processing)
     const executionTime = Date.now() - startTime;
-    console.log(`[cron] ⏱️ Execution completed in ${executionTime}ms`);
+    console.log(`[cron] ⏱️ Main job completed in ${executionTime}ms, releasing lock...`);
     await releaseCronLock();
+    console.log(`[cron] ✅ Lock released`);
+
+    // NOW trigger notifications (outside the lock, fire-and-forget)
+    if (productIds.length > 0) {
+      console.log(
+        `[cron] Triggering notification job for ${productIds.length} new arrivals`
+      );
+      console.log(`[cron] Product IDs to notify:`, productIds);
+      
+      // Use setImmediate to ensure this runs after the response is sent
+      setImmediate(async () => {
+        try {
+          console.log(`[cron] [async] Starting notification job...`);
+          console.log(`[cron] [async] Fetching products from database...`);
+          const dbProducts = await db
+            .select()
+            .from(products)
+            .where(inArray(products.id, productIds));
+
+          if (dbProducts.length === 0) {
+            console.log(`[cron] [async] No products found for IDs: ${productIds}`);
+            return;
+          }
+
+          console.log(`[cron] [async] Found ${dbProducts.length} products, preparing notifications...`);
+          const newArrivals = dbProducts.map((p) => ({
+            productId: p.id,
+            externalId: p.externalId,
+            name: p.name,
+            url: p.url,
+            imageUrl: p.imageUrl ?? null,
+            detectedAt: p.createdAt,
+          }));
+
+          const { notifiedProductIds } = await notifySubscribersOfNewArrivals({
+            newArrivals,
+          });
+
+          console.log(
+            `[cron] [async] ✅ Notification job completed: ${notifiedProductIds.length} products notified`
+          );
+        } catch (error) {
+          console.error("[cron] [async] ❌ Failed to process notification job:", error);
+          console.error("[cron] [async] Error details:", {
+            message: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+            name: error instanceof Error ? error.name : undefined,
+          });
+        }
+      });
+    }
+
+    return NextResponse.json(responseData);
+  } catch (error) {
+    const executionTime = Date.now() - startTime;
+    console.error(`[cron] ❌ Error in cron job after ${executionTime}ms:`, error);
+    await releaseCronLock();
+    throw error;
   }
 }
 
