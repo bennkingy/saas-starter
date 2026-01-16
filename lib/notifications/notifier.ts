@@ -22,12 +22,17 @@ type NotifyArgs = {
 export async function notifySubscribersOfNewArrivals({
   newArrivals,
 }: NotifyArgs) {
-  console.log(
-    `[notifier] Starting notification process for ${newArrivals.length} new arrivals`
-  );
+  console.log(`[notifier] ========================================`);
+  console.log(`[notifier] notifySubscribersOfNewArrivals called`);
+  console.log(`[notifier] New arrivals count: ${newArrivals.length}`);
+  console.log(`[notifier] New arrivals:`, newArrivals.map(a => ({
+    productId: a.productId,
+    externalId: a.externalId,
+    name: a.name,
+  })));
 
   if (newArrivals.length === 0) {
-    console.log("[notifier] No new arrivals to notify");
+    console.log("[notifier] No new arrivals to notify - exiting early");
     return { notifiedProductIds: [] as number[] };
   }
 
@@ -182,6 +187,14 @@ export async function notifySubscribersOfNewArrivals({
    * Use allSettled so individual failures don't stop the whole process.
    */
   console.log(`[notifier] Starting to send notifications...`);
+  console.log(`[notifier] Total recipients to process: ${activeRecipients.length}`);
+  console.log(`[notifier] Recipients:`, activeRecipients.map(r => ({
+    email: r.email,
+    emailEnabled: r.emailEnabled,
+    smsEnabled: r.smsEnabled,
+    hasPhoneNumber: !!r.phoneNumber,
+  })));
+
   const notificationPromises = activeRecipients
     .map((recipient) => {
       // Only send when explicitly enabled (true), not when null or false
@@ -196,35 +209,48 @@ export async function notifySubscribersOfNewArrivals({
       //   planName: recipient.teamPlanName ?? null,
       // });
       console.log(
-        `[notifier] Creating notification promises for ${recipient.email} with ${pendingArrivals.length} products (emailEnabled: ${emailEnabled}, smsEnabled: ${smsEnabled}, canSendSms: ${canSendSms})`
+        `[notifier] Processing recipient ${recipient.email}: emailEnabled=${emailEnabled}, smsEnabled=${smsEnabled}, canSendSms=${canSendSms}, products=${pendingArrivals.length}`
       );
 
       const emailPromise = emailEnabled
-        ? sendNewArrivalEmail({
-            to: recipient.email,
-            products: pendingArrivals.map((arrival) => ({
-              name: formatProductName(arrival.name),
-              url: arrival.url,
-              imageUrl: arrival.imageUrl,
-            })),
-          })
-            .then(() => {
+        ? (async () => {
+            console.log(`[notifier] Attempting to send email to ${recipient.email}...`);
+            try {
+              await sendNewArrivalEmail({
+                to: recipient.email,
+                products: pendingArrivals.map((arrival) => ({
+                  name: formatProductName(arrival.name),
+                  url: arrival.url,
+                  imageUrl: arrival.imageUrl,
+                })),
+              });
               console.log(
                 `[notifier] ✅ Email sent successfully to ${recipient.email} with ${pendingArrivals.length} products`
               );
-            })
-            .catch((error) => {
+            } catch (error) {
               console.error(
                 `[notifier] ❌ Failed to send email to ${recipient.email}:`,
                 error
               );
               console.error(
-                `[notifier] Error details:`,
+                `[notifier] Error type:`,
+                error instanceof Error ? error.constructor.name : typeof error
+              );
+              console.error(
+                `[notifier] Error message:`,
                 error instanceof Error ? error.message : String(error)
               );
+              console.error(
+                `[notifier] Error stack:`,
+                error instanceof Error ? error.stack : "No stack trace"
+              );
               throw error;
-            })
-        : Promise.resolve();
+            }
+          })()
+        : (() => {
+            console.log(`[notifier] Skipping email for ${recipient.email} (emailEnabled=false)`);
+            return Promise.resolve();
+          })();
 
       const smsBody =
         pendingArrivals.length === 1
@@ -264,7 +290,11 @@ export async function notifySubscribersOfNewArrivals({
   console.log(
     `[notifier] Created ${notificationPromises.length} notification promises, awaiting all...`
   );
+  console.log(`[notifier] Starting Promise.allSettled...`);
+  const startTime = Date.now();
   const results = await Promise.allSettled(notificationPromises);
+  const duration = Date.now() - startTime;
+  console.log(`[notifier] Promise.allSettled completed in ${duration}ms`);
 
   const successful = results.filter((r) => r.status === "fulfilled").length;
   const failed = results.filter((r) => r.status === "rejected").length;
@@ -273,12 +303,18 @@ export async function notifySubscribersOfNewArrivals({
   );
 
   if (failed > 0) {
-    console.log(`[notifier] Failed notification details:`);
+    console.error(`[notifier] ⚠️ ${failed} notification(s) failed:`);
     results.forEach((result, index) => {
       if (result.status === "rejected") {
-        console.error(`[notifier]   Failed promise ${index}:`, result.reason);
+        console.error(`[notifier]   Failed promise ${index}:`, {
+          reason: result.reason,
+          message: result.reason instanceof Error ? result.reason.message : String(result.reason),
+          stack: result.reason instanceof Error ? result.reason.stack : undefined,
+        });
       }
     });
+  } else {
+    console.log(`[notifier] ✅ All notifications completed successfully`);
   }
 
   // Mark products as notified even if some emails failed (we don't want to retry forever)
@@ -301,6 +337,9 @@ export async function notifySubscribersOfNewArrivals({
     `[notifier] ✅ Database update completed. Marked ${notifiedIds.length} products as notified`
   );
   console.log(`[notifier] Returning notifiedProductIds:`, notifiedIds);
+  console.log(`[notifier] ========================================`);
+  console.log(`[notifier] ✅ Notification process completed successfully`);
+  console.log(`[notifier] Summary: ${notifiedIds.length} products notified to ${activeRecipients.length} recipients`);
 
   return { notifiedProductIds: notifiedIds };
 }

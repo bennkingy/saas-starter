@@ -17,14 +17,21 @@ function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.RESEND_FROM_EMAIL;
 
+  console.log(`[email] Checking Resend configuration...`);
+  console.log(`[email] RESEND_API_KEY present: ${!!apiKey}`);
+  console.log(`[email] RESEND_FROM_EMAIL: ${fromEmail || "MISSING"}`);
+
   if (!apiKey) {
+    console.error(`[email] ❌ RESEND_API_KEY is missing`);
     throw new Error("Missing RESEND_API_KEY environment variable.");
   }
 
   if (!fromEmail) {
+    console.error(`[email] ❌ RESEND_FROM_EMAIL is missing`);
     throw new Error("Missing RESEND_FROM_EMAIL environment variable.");
   }
 
+  console.log(`[email] ✅ Resend configuration valid`);
   return {
     client: new Resend(apiKey),
     from: fromEmail,
@@ -103,24 +110,44 @@ export async function sendNewArrivalEmail({
     </div>
   `;
 
-  console.log(`[email] Sending email via Resend API...`);
-  const { error, data } = await client.emails.send({
+  console.log(`[email] Preparing to send email via Resend API...`);
+  console.log(`[email] Email details:`, {
     from,
     to,
     subject,
-    text,
-    html,
+    productCount: products.length,
   });
 
-  if (error) {
-    console.error(`[email] ❌ Resend API error:`, error);
-    const helpfulMessage = error.message.includes("domain is not verified")
-      ? `${error.message}. For testing without a custom domain, use 'onboarding@resend.dev' as RESEND_FROM_EMAIL.`
-      : error.message;
-    throw new Error(`Failed to send email: ${helpfulMessage}`);
-  }
+  try {
+    const { error, data } = await client.emails.send({
+      from,
+      to,
+      subject,
+      text,
+      html,
+    });
 
-  console.log(`[email] ✅ Email sent successfully via Resend, response:`, data);
+    if (error) {
+      console.error(`[email] ❌ Resend API error:`, error);
+      console.error(`[email] Error type:`, typeof error);
+      console.error(`[email] Error details:`, JSON.stringify(error, null, 2));
+      const helpfulMessage = error.message?.includes("domain is not verified")
+        ? `${error.message}. For testing without a custom domain, use 'onboarding@resend.dev' as RESEND_FROM_EMAIL.`
+        : error.message || "Unknown error from Resend API";
+      throw new Error(`Failed to send email: ${helpfulMessage}`);
+    }
+
+    console.log(`[email] ✅ Email sent successfully via Resend`);
+    console.log(`[email] Resend response data:`, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error(`[email] ❌ Exception while sending email:`, error);
+    console.error(`[email] Exception details:`, {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+      name: error instanceof Error ? error.name : undefined,
+    });
+    throw error;
+  }
 }
 
 type SendPasswordResetEmailArgs = {

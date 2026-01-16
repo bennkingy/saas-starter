@@ -10,6 +10,9 @@ export const runtime = "nodejs";
 async function runNotificationJob(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
   
+  console.log(`[notify] Checking authorization...`);
+  console.log(`[notify] CRON_SECRET present: ${!!cronSecret}`);
+  
   const authHeader = request.headers.get("authorization");
   const isVercelCron = authHeader?.startsWith("Bearer ") && 
     authHeader.slice(7) === cronSecret;
@@ -18,12 +21,27 @@ async function runNotificationJob(request: Request) {
     NOTIFICATIONS_CONFIG.cron.headerName
   );
 
+  console.log(`[notify] Auth check:`, {
+    hasAuthHeader: !!authHeader,
+    isVercelCron,
+    hasProvidedSecret: !!providedSecret,
+  });
+
   const isAuthorized =
     isVercelCron || (cronSecret && providedSecret === cronSecret);
 
   if (!isAuthorized) {
+    console.error(`[notify] ❌ Unauthorized request`);
+    console.error(`[notify] Auth details:`, {
+      authHeader: authHeader ? "present" : "missing",
+      isVercelCron,
+      providedSecret: providedSecret ? "present" : "missing",
+      cronSecret: cronSecret ? "present" : "missing",
+    });
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  
+  console.log(`[notify] ✅ Authorization successful`);
 
   try {
     const body = await request.json();
@@ -82,5 +100,19 @@ async function runNotificationJob(request: Request) {
 }
 
 export async function POST(request: Request) {
-  return await runNotificationJob(request);
+  console.log(`[notify] POST endpoint called`);
+  console.log(`[notify] Request URL: ${request.url}`);
+  console.log(`[notify] Request headers:`, {
+    authorization: request.headers.get("authorization") ? "present" : "missing",
+    contentType: request.headers.get("content-type"),
+  });
+  
+  try {
+    const result = await runNotificationJob(request);
+    console.log(`[notify] ✅ Notification job completed successfully`);
+    return result;
+  } catch (error) {
+    console.error(`[notify] ❌ Unhandled error in POST handler:`, error);
+    throw error;
+  }
 }

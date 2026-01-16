@@ -119,18 +119,50 @@ async function runNewArrivalsCheck(request: Request) {
       `[cron] Triggering async notification job for ${productIds.length} new arrivals`
     );
     
-    const notifyUrl = new URL("/api/cron/notify", request.url);
+    // Construct the notification URL
+    // In Vercel, we need to use the full URL with the deployment URL
+    // VERCEL_URL is available in preview deployments, VERCEL_BRANCH_URL for branch deployments
+    // In production, use the request origin
+    const baseUrl = process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}`
+      : process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin;
+    const notifyUrl = `${baseUrl}/api/cron/notify`;
     
-    fetch(notifyUrl.toString(), {
+    console.log(`[cron] Notification URL: ${notifyUrl}`);
+    console.log(`[cron] Product IDs to notify:`, productIds);
+    console.log(`[cron] CRON_SECRET present: ${!!cronSecret}`);
+    
+    // Use fetch with proper error handling and logging
+    fetch(notifyUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${cronSecret}`,
       },
       body: JSON.stringify({ productIds }),
-    }).catch((error) => {
-      console.error("[cron] ⚠️ Failed to trigger notification job:", error);
-    });
+    })
+      .then(async (response) => {
+        const responseText = await response.text();
+        if (!response.ok) {
+          console.error(
+            `[cron] ❌ Notification job failed with status ${response.status}:`,
+            responseText
+          );
+        } else {
+          console.log(
+            `[cron] ✅ Notification job triggered successfully:`,
+            responseText
+          );
+        }
+      })
+      .catch((error) => {
+        console.error("[cron] ❌ Failed to trigger notification job:", error);
+        console.error("[cron] Error details:", {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+        });
+      });
 
     return NextResponse.json({
       productsFound: snapshot.products.length,
