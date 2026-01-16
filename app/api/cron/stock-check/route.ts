@@ -133,11 +133,13 @@ async function runNewArrivalsCheck(request: Request) {
     console.log(`[cron] CRON_SECRET present: ${!!cronSecret}`);
     
     // Use fetch with proper error handling and logging
+    // Send both Authorization header (for Vercel Cron compatibility) and x-cron-secret header (for internal calls)
     fetch(notifyUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${cronSecret}`,
+        [NOTIFICATIONS_CONFIG.cron.headerName]: cronSecret || "",
       },
       body: JSON.stringify({ productIds }),
     })

@@ -12,8 +12,10 @@ async function runNotificationJob(request: Request) {
   
   console.log(`[notify] Checking authorization...`);
   console.log(`[notify] CRON_SECRET present: ${!!cronSecret}`);
+  console.log(`[notify] CRON_SECRET length: ${cronSecret?.length || 0}`);
   
   const authHeader = request.headers.get("authorization");
+  const authHeaderValue = authHeader ? (authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader) : null;
   const isVercelCron = authHeader?.startsWith("Bearer ") && 
     authHeader.slice(7) === cronSecret;
   
@@ -23,8 +25,13 @@ async function runNotificationJob(request: Request) {
 
   console.log(`[notify] Auth check:`, {
     hasAuthHeader: !!authHeader,
+    authHeaderPrefix: authHeader?.substring(0, 20) || "none",
+    authHeaderValueLength: authHeaderValue?.length || 0,
+    authHeaderMatches: authHeaderValue === cronSecret,
     isVercelCron,
     hasProvidedSecret: !!providedSecret,
+    providedSecretLength: providedSecret?.length || 0,
+    providedSecretMatches: providedSecret === cronSecret,
   });
 
   const isAuthorized =
