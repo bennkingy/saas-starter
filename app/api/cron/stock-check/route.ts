@@ -3,6 +3,10 @@ import { NOTIFICATIONS_CONFIG } from "@/lib/config/notifications";
 import { fetchNewProductsSnapshot } from "@/lib/stock/fetcher";
 import { syncProductsAndDetectNewArrivals } from "@/lib/stock/differ";
 import { client } from "@/lib/db/drizzle";
+import { notifySubscribersOfNewArrivals } from "@/lib/notifications/notifier";
+import { db } from "@/lib/db/drizzle";
+import { products } from "@/lib/db/schema";
+import { inArray } from "drizzle-orm";
 
 export const runtime = "nodejs";
 
@@ -113,55 +117,54 @@ async function runNewArrivalsCheck(request: Request) {
       });
     }
 
-    // Trigger notifications asynchronously (fire-and-forget)
+    // Trigger notifications directly (avoiding HTTP call to bypass Vercel deployment protection)
     const productIds = newArrivals.map((a) => a.productId);
     console.log(
-      `[cron] Triggering async notification job for ${productIds.length} new arrivals`
+      `[cron] Triggering notification job directly for ${productIds.length} new arrivals`
     );
-    
-    // For internal API calls in Vercel, construct URL from request origin
-    // This ensures the call stays within the same deployment and bypasses Vercel's edge protection
-    const requestUrl = new URL(request.url);
-    const notifyUrl = `${requestUrl.origin}/api/cron/notify`;
-    
-    console.log(`[cron] Notification URL: ${notifyUrl}`);
-    console.log(`[cron] Request origin: ${requestUrl.origin}`);
     console.log(`[cron] Product IDs to notify:`, productIds);
-    console.log(`[cron] CRON_SECRET present: ${!!cronSecret}`);
     
-    // Use fetch with proper error handling and logging
-    // Send both Authorization header (for Vercel Cron compatibility) and x-cron-secret header (for internal calls)
-    fetch(notifyUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${cronSecret}`,
-        [NOTIFICATIONS_CONFIG.cron.headerName]: cronSecret || "",
-      },
-      body: JSON.stringify({ productIds }),
-    })
-      .then(async (response) => {
-        const responseText = await response.text();
-        if (!response.ok) {
-          console.error(
-            `[cron] ❌ Notification job failed with status ${response.status}:`,
-            responseText
-          );
-        } else {
-          console.log(
-            `[cron] ✅ Notification job triggered successfully:`,
-            responseText
-          );
+    // Call the notification function directly instead of making an HTTP request
+    // This bypasses Vercel's deployment protection and is more efficient
+    (async () => {
+      try {
+        console.log(`[cron] Fetching products from database...`);
+        const dbProducts = await db
+          .select()
+          .from(products)
+          .where(inArray(products.id, productIds));
+
+        if (dbProducts.length === 0) {
+          console.log(`[cron] No products found for IDs: ${productIds}`);
+          return;
         }
-      })
-      .catch((error) => {
-        console.error("[cron] ❌ Failed to trigger notification job:", error);
-        console.error("[cron] Error details:", {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
+
+        console.log(`[cron] Found ${dbProducts.length} products, preparing notifications...`);
+        const newArrivals = dbProducts.map((p) => ({
+          productId: p.id,
+          externalId: p.externalId,
+          name: p.name,
+          url: p.url,
+          imageUrl: p.imageUrl ?? null,
+          detectedAt: p.createdAt,
+        }));
+
+        const { notifiedProductIds } = await notifySubscribersOfNewArrivals({
+          newArrivals,
         });
-      });
+
+        console.log(
+          `[cron] ✅ Notification job completed: ${notifiedProductIds.length} products notified`
+        );
+      } catch (error) {
+        console.error("[cron] ❌ Failed to process notification job:", error);
+        console.error("[cron] Error details:", {
+          message: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+          name: error instanceof Error ? error.name : undefined,
+        });
+      }
+    })();
 
     return NextResponse.json({
       productsFound: snapshot.products.length,
