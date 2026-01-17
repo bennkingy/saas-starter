@@ -19,6 +19,12 @@ export const metadata: Metadata = {
   applicationName: SITE_NAME,
   icons: {
     icon: [
+      { url: "/icon.ico", type: "image/x-icon", sizes: "any" },
+    ],
+    apple: [
+      { url: "/icon.ico", type: "image/x-icon" },
+    ],
+    shortcut: [
       { url: "/icon.ico", type: "image/x-icon" },
     ],
   },
